@@ -40,11 +40,11 @@ export const TimetablePage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Master School Timetable
+             School Timetable
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+          {/* <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Weekly subject schedule, teaching periods, and assigned laboratory allocations.
-          </p>
+          </p> */}
         </div>
 
         <div className="flex items-center gap-2">
@@ -91,57 +91,63 @@ export const TimetablePage: React.FC = () => {
       </div>
 
       {/* Timetable Weekly Grid */}
-      <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto">
-        <table className="w-full min-w-[700px] border-collapse text-xs">
-          <thead>
-            <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-              <th className="p-3 text-left font-bold text-slate-700 dark:text-slate-300 w-32">
-                Period / Time
-              </th>
-              {days.map((day) => (
-                <th key={day} className="p-3 text-center font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                  {day}
+      <div className="p-3.5 sm:p-6 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="flex sm:hidden items-center justify-between pb-2.5 px-1 text-[11px] text-slate-500">
+          <span>Swipe sideways to view all days</span>
+          <span className="font-semibold text-brand-600">Mon — Fri</span>
+        </div>
+        <div className="overflow-x-auto -mx-3.5 sm:mx-0 px-3.5 sm:px-0">
+          <table className="w-full min-w-[680px] border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                <th className="p-3 text-left font-bold text-slate-700 dark:text-slate-300 w-32 sticky left-0 z-10 bg-slate-100 dark:bg-slate-800 shadow-[2px_0_5px_-1px_rgba(0,0,0,0.08)]">
+                  Period / Time
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:border-slate-800">
-            {periods.map((p) => (
-              <tr key={p.period} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                <td className="p-3 font-semibold text-slate-600 dark:text-slate-300 bg-slate-50/70 dark:bg-slate-800/40">
-                  <div className="font-bold text-slate-900 dark:text-white">Period {p.period}</div>
-                  <div className="text-[11px] text-slate-400 font-mono mt-0.5">{p.time}</div>
-                </td>
-
-                {days.map((day) => {
-                  const slot = classSlots.find((s) => s.day === day && s.period === p.period);
-
-                  return (
-                    <td key={day} className="p-2.5 text-center align-top">
-                      {slot ? (
-                        <div className="p-2.5 rounded-2xl bg-brand-50/80 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800/80 hover:shadow-sm transition-all text-left">
-                          <p className="font-bold text-brand-900 dark:text-brand-200 text-xs truncate">
-                            {slot.subject}
-                          </p>
-                          <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 truncate">
-                            {slot.teacherName}
-                          </p>
-                          <div className="mt-1 flex items-center justify-between text-[10px] text-brand-600 dark:text-brand-400 font-medium">
-                            <span className="truncate">{slot.room}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="p-2.5 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-300 dark:text-slate-600 text-[11px] italic">
-                          Study / Recess
-                        </div>
-                      )}
-                    </td>
-                  );
-                })}
+                {days.map((day) => (
+                  <th key={day} className="p-3 text-center font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                    {day}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:border-slate-800">
+              {periods.map((p) => (
+                <tr key={p.period} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                  <td className="p-3 font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 sticky left-0 z-10 shadow-[2px_0_5px_-1px_rgba(0,0,0,0.08)]">
+                    <div className="font-bold text-slate-900 dark:text-white">Period {p.period}</div>
+                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">{p.time}</div>
+                  </td>
+
+                  {days.map((day) => {
+                    const slot = classSlots.find((s) => s.day === day && s.period === p.period);
+
+                    return (
+                      <td key={day} className="p-2 sm:p-2.5 text-center align-top">
+                        {slot ? (
+                          <div className="p-2 sm:p-2.5 rounded-2xl bg-brand-50/80 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800/80 hover:shadow-sm transition-all text-left">
+                            <p className="font-bold text-brand-900 dark:text-brand-200 text-xs truncate">
+                              {slot.subject}
+                            </p>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 truncate">
+                              {slot.teacherName}
+                            </p>
+                            <div className="mt-1 flex items-center justify-between text-[10px] text-brand-600 dark:text-brand-400 font-medium">
+                              <span className="truncate">{slot.room}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-2 sm:p-2.5 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-300 dark:text-slate-600 text-[11px] italic">
+                            Study / Recess
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

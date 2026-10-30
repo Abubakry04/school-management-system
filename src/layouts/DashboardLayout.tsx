@@ -14,7 +14,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ role }) => {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-[#f4f6f5] dark:bg-slate-950 flex flex-col font-sans">
       {/* Sidebar for this role */}
       <Sidebar
         role={role}

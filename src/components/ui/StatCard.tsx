@@ -1,5 +1,5 @@
 import React from 'react';
-import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
 interface StatCardProps {
   title: string;
@@ -10,6 +10,8 @@ interface StatCardProps {
     positive: boolean;
   };
   subtitle?: string;
+  iconBg?: string;
+  iconColor?: string;
   onClick?: () => void;
 }
 
@@ -19,51 +21,54 @@ export const StatCard: React.FC<StatCardProps> = ({
   icon: Icon,
   trend,
   subtitle,
+  iconBg = 'bg-emerald-50 dark:bg-emerald-950/40',
+  iconColor = 'text-emerald-700 dark:text-emerald-400',
   onClick,
 }) => {
   return (
     <div
       onClick={onClick}
-      className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-5 rounded-xl shadow-xs transition-colors ${
+      className={`bg-white dark:bg-slate-900 border border-[#e8ede9] dark:border-slate-800 p-6 rounded-2xl shadow-xs transition-all duration-200 ${
         onClick
-          ? 'cursor-pointer hover:border-slate-300 dark:hover:border-slate-700'
+          ? 'cursor-pointer hover:shadow-md hover:border-emerald-300 dark:hover:border-slate-700'
           : ''
       }`}
     >
-      <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-        <span className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-          {title}
-        </span>
-        {Icon && <Icon className="w-4 h-4 text-slate-400 dark:text-slate-500" />}
-      </div>
-
-      <div className="flex items-baseline justify-between gap-2">
-        <div className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100 font-sans tabular-nums">
-          {value}
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-sans tabular-nums">
+            {value}
+          </div>
+          <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+            {title}
+          </p>
         </div>
-        {trend && (
-          <span
-            className={`inline-flex items-center text-xs font-medium ${
-              trend.positive
-                ? 'text-emerald-700 dark:text-emerald-400'
-                : 'text-rose-700 dark:text-rose-400'
-            }`}
-          >
-            {trend.positive ? (
-              <TrendingUp className="w-3 h-3 mr-0.5" />
-            ) : (
-              <TrendingDown className="w-3 h-3 mr-0.5" />
-            )}
-            {trend.value}
-          </span>
+
+        {Icon && (
+          <div className={`w-11 h-11 rounded-xl ${iconBg} ${iconColor} flex items-center justify-center shrink-0 shadow-xs`}>
+            <Icon className="w-5 h-5 stroke-[2.2]" />
+          </div>
         )}
       </div>
 
-      {subtitle && (
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 truncate">
-          {subtitle}
-        </p>
-      )}
+      <div className="mt-4 pt-1">
+        {trend && (
+          <span
+            className={`text-xs font-semibold ${
+              trend.positive
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-rose-600 dark:text-rose-400'
+            }`}
+          >
+            {trend.value}
+          </span>
+        )}
+        {subtitle && !trend && (
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            {subtitle}
+          </span>
+        )}
+      </div>
     </div>
   );
 };
