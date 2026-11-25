@@ -1,8 +1,12 @@
 import React from 'react';
-import { Calendar, Clock, Printer } from 'lucide-react';
-import { mockTimetableSlots } from '../../data/mockData';
+import { Printer } from 'lucide-react';
+import { useData } from '../../context/DataContext';
 
 export const StudentTimetablePage: React.FC = () => {
+  const { timetable, students, classes } = useData();
+  const student = students[0];
+  const activeClass = classes.find((c) => c.id === student?.classId) || classes[0];
+
   const days: ('Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday')[] = [
     'Monday',
     'Tuesday',
@@ -19,14 +23,14 @@ export const StudentTimetablePage: React.FC = () => {
     { period: 5, time: '11:45 - 12:30' },
   ];
 
-  const classSlots = mockTimetableSlots.filter((slot) => slot.classId === 'cls-06'); // SS 2 Science
+  const classSlots = timetable.filter((slot) => slot.classId === activeClass?.id);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            SS 2 Science Class Timetable
+            {activeClass ? `${activeClass.name} Class Timetable` : 'Student Class Timetable'}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Weekly lectures, practical labs, and study periods.

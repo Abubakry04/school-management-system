@@ -18,8 +18,8 @@ import { Modal } from '../../components/ui/Modal';
 import { FormInput, FormSelect } from '../../components/ui/FormInputs';
 import { ReceiptModal } from '../../components/ui/ReceiptModal';
 import { PaymentRecord, FeeStructure } from '../../types';
-import { mockPaymentRecords, mockFeeStructures, mockStudents } from '../../data/mockData';
 import { useToast } from '../../context/ToastContext';
+import { useData } from '../../context/DataContext';
 
 const paymentSchema = z.object({
   studentId: z.string().min(1, 'Please select a student'),
@@ -32,8 +32,8 @@ type PaymentFormData = z.infer<typeof paymentSchema>;
 
 export const FeesPage: React.FC = () => {
   const { showToast } = useToast();
+  const { payments: paymentRecords, students: mockStudents, feeStructures, addPayment, settings } = useData();
 
-  const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>(mockPaymentRecords);
   const [selectedReceipt, setSelectedReceipt] = useState<PaymentRecord | null>(null);
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
 
@@ -45,10 +45,10 @@ export const FeesPage: React.FC = () => {
   } = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
-      studentId: mockStudents[0].id,
+      studentId: mockStudents[0]?.id || '',
       amountPaid: 290000,
       paymentMethod: 'Bank Transfer',
-      term: '2nd Term',
+      term: settings.currentTerm,
     },
   });
 
@@ -57,30 +57,27 @@ export const FeesPage: React.FC = () => {
 
   const onSubmitPayment = (data: PaymentFormData) => {
     const student = mockStudents.find((s) => s.id === data.studentId) || mockStudents[0];
-    const totalDue = student.className.startsWith('SS') ? 290000 : 240000;
+    const totalDue = student?.className.startsWith('SS') ? 290000 : 240000;
     const balance = Math.max(0, totalDue - data.amountPaid);
     const status = balance === 0 ? 'Paid' : data.amountPaid > 0 ? 'Partial' : 'Pending';
 
-    const newPayment: PaymentRecord = {
-      id: `pay-${Date.now()}`,
-      receiptNumber: `FEA/REC/2026/0${Math.floor(550 + Math.random() * 400)}`,
-      studentId: student.id,
-      studentName: student.fullName,
-      admissionNo: student.admissionNo,
-      className: student.className,
+    const recorded = addPayment({
+      studentId: student?.id || data.studentId,
+      studentName: student?.fullName || 'Student',
+      admissionNo: student?.admissionNo || '',
+      className: student?.className || 'JSS 1A',
       amountPaid: data.amountPaid,
       totalDue,
       balance,
-      paymentDate: '16th Feb, 2026',
+      paymentDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
       paymentMethod: data.paymentMethod,
       status,
       term: data.term,
-      session: '2025/2026',
+      session: settings.currentSession,
       recordedBy: 'Mrs. K. Bankole (Bursar)',
-    };
+    });
 
-    setPaymentRecords((prev) => [newPayment, ...prev]);
-    showToast(`Payment of ₦${data.amountPaid.toLocaleString()} recorded for ${student.fullName}`, 'success');
+    showToast(`Payment of ₦${data.amountPaid.toLocaleString()} recorded for ${student?.fullName}`, 'success');
     setIsRecordModalOpen(false);
     reset();
   };
@@ -233,7 +230,7 @@ export const FeesPage: React.FC = () => {
 
       {/* Fee Structure Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {mockFeeStructures.map((fee) => (
+        {feeStructures.map((fee) => (
           <div
             key={fee.id}
             className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3"

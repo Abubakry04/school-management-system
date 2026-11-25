@@ -1,20 +1,25 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
-  Settings,
-  School,
   Calendar,
   Save,
-  CheckCircle,
   Building,
-  GraduationCap,
+  RotateCcw,
+  Trash2,
+  ShieldAlert,
+  FileSpreadsheet,
+  Clock,
+  Activity,
 } from 'lucide-react';
-import { mockSchoolSettings } from '../../data/mockData';
-import { SchoolSettings } from '../../types';
+import { SchoolSettings, AuditLog } from '../../types';
 import { FormInput, FormSelect } from '../../components/ui/FormInputs';
 import { useToast } from '../../context/ToastContext';
+import { useData } from '../../context/DataContext';
+import { exportToCSV } from '../../utils/exportUtils';
+import { Badge } from '../../components/ui/Badge';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 const settingsSchema = z.object({
   schoolName: z.string().min(3, 'School name is required'),
@@ -32,11 +37,12 @@ type SettingsFormData = z.infer<typeof settingsSchema>;
 
 export const SettingsPage: React.FC = () => {
   const { showToast } = useToast();
-  const [settings, setSettings] = useState<SchoolSettings>(mockSchoolSettings);
+  const { settings, updateSettings, clearAllRecords, auditLogs } = useData();
 
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<SettingsFormData>({
     resolver: zodResolver(settingsSchema),
@@ -44,19 +50,46 @@ export const SettingsPage: React.FC = () => {
   });
 
   const onSubmit = (data: SettingsFormData) => {
-    setSettings((prev) => ({ ...prev, ...data }));
+    updateSettings(data);
     showToast('School settings and term parameters updated!', 'success');
   };
 
+  const handleClearAllRecords = () => {
+    if (
+      window.confirm(
+        'Are you sure you want to purge all dynamic records (students, invoices, attendance, grades, announcements)? Institutional details and subjects will remain intact.'
+      )
+    ) {
+      clearAllRecords();
+      showToast('All dynamic data purged. The system is now completely fresh.', 'info');
+    }
+  };
+
+  const handleExportAuditLogs = () => {
+    if (auditLogs.length === 0) {
+      showToast('No audit events recorded yet', 'info');
+      return;
+    }
+    exportToCSV('school_system_audit_log.csv', auditLogs, {
+      id: 'Event ID',
+      timestamp: 'Timestamp',
+      category: 'Category',
+      action: 'Action',
+      details: 'Details',
+      performedBy: 'User',
+    });
+    showToast('Audit trail exported successfully', 'success');
+  };
+
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-8 max-w-4xl">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
           System & Institutional Settings
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Configure school identity, active academic calendar, and administrative authorities.
+          Configure school identity, active academic calendar, data maintenance, and security audit trail.
         </p>
       </div>
 
@@ -163,8 +196,8 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Action Button */}
-        <div className="flex justify-end">
+        {/* Save Button */}
+        <div className="flex justify-end pt-2">
           <button
             type="submit"
             disabled={isSubmitting}
@@ -175,6 +208,97 @@ export const SettingsPage: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {/* System Audit Trail */}
+      <div className="p-6 sm:p-8 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            <Activity className="w-5 h-5 text-brand-600" />
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                Audit Trail & Security Activity Log
+              </h2>
+              <p className="text-xs text-slate-400">
+                Tracks critical administrative mutations, student status modifications, and financial actions.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleExportAuditLogs}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Export CSV</span>
+          </button>
+        </div>
+
+        {auditLogs.length === 0 ? (
+          <EmptyState
+            title="No activity recorded"
+            description="Operational events and user actions will be listed here chronologically."
+          />
+        ) : (
+          <div className="max-h-72 overflow-y-auto space-y-2 pr-1 divide-y divide-slate-100 dark:divide-slate-800/60">
+            {auditLogs.map((log) => (
+              <div key={log.id} className="pt-2.5 pb-1 flex items-start justify-between gap-4 text-xs">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="brand" size="sm">
+                      {log.category}
+                    </Badge>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {log.action}
+                    </span>
+                  </div>
+                  <p className="text-slate-500 dark:text-slate-400 text-[11px]">
+                    {log.details}
+                  </p>
+                </div>
+                <div className="text-right whitespace-nowrap text-[10px] text-slate-400 flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  <span>{log.timestamp}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Database Maintenance & Clear Data */}
+      <div className="p-6 sm:p-8 bg-rose-50/50 dark:bg-rose-950/20 rounded-3xl border border-rose-200 dark:border-rose-900/40 shadow-sm space-y-4">
+        <div className="flex items-center gap-3 pb-3 border-b border-rose-100 dark:border-rose-900/40">
+          <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+          <div>
+            <h2 className="text-base font-bold text-rose-900 dark:text-rose-200">
+              Data Purge & System Reset
+            </h2>
+            <p className="text-xs text-rose-600 dark:text-rose-400">
+              Administrative data management controls.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-2">
+          <div>
+            <p className="text-xs font-semibold text-slate-900 dark:text-white">
+              Purge All Dynamic Records (Fresh State)
+            </p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Permanently empties all students, invoices/payments, attendance, grades, and announcements. Institutional settings and subjects remain preserved.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleClearAllRecords}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/40 dark:hover:bg-rose-900/60 rounded-xl transition-colors whitespace-nowrap"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Purge Dynamic Data</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

@@ -15,6 +15,9 @@ import {
   X,
   HelpCircle,
   Sparkles,
+  UserPlus,
+  BookMarked,
+  FileText,
 } from 'lucide-react';
 import { UserRole } from '../../types';
 
@@ -58,11 +61,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, onClose }) => {
       items: [
         { label: 'Overview', path: '/admin/dashboard', icon: Home },
         { label: 'Students', path: '/admin/students', icon: Users },
+        { label: 'Admissions', path: '/admin/admissions', icon: UserPlus, badge: 3 },
         { label: 'Teachers', path: '/admin/teachers', icon: GraduationCap },
         { label: 'Classes', path: '/admin/classes', icon: BookOpen },
+        { label: 'Curriculum & Subjects', path: '/admin/subjects', icon: BookMarked },
         { label: 'Attendance', path: '/admin/attendance', icon: CalendarCheck },
-        { label: 'Reports', path: '/admin/results', icon: BarChart3 },
-        { label: 'Messages', path: '/admin/announcements', icon: MessageSquare, badge: 2 },
+        { label: 'Reports & Broadsheet', path: '/admin/results', icon: BarChart3 },
+        { label: 'Messages & Notices', path: '/admin/announcements', icon: MessageSquare, badge: 2 },
         { label: 'Settings', path: '/admin/settings', icon: Settings },
       ],
     },
@@ -83,6 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, onClose }) => {
         { label: 'Assigned Classes', path: '/teacher/classes', icon: BookOpen },
         { label: 'Attendance', path: '/teacher/attendance', icon: CalendarCheck },
         { label: 'Gradebook', path: '/teacher/grades', icon: BarChart3 },
+        { label: 'Assignments & LMS', path: '/teacher/assignments', icon: FileText },
         { label: 'Timetable', path: '/teacher/timetable', icon: Calendar },
         { label: 'Noticeboard', path: '/teacher/announcements', icon: MessageSquare, badge: 1 },
       ],
@@ -95,6 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, onClose }) => {
       items: [
         { label: 'Overview', path: '/student/dashboard', icon: Home },
         { label: 'Report Card', path: '/student/results', icon: BarChart3 },
+        { label: 'Assignments & LMS', path: '/student/assignments', icon: FileText },
         { label: 'Attendance Log', path: '/student/attendance', icon: CalendarCheck },
         { label: 'Timetable', path: '/student/timetable', icon: Calendar },
         { label: 'Clearance & Fees', path: '/student/fees', icon: CreditCard },
@@ -207,29 +214,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, onClose }) => {
           ))}
         </div>
 
-        {/* Help Widget matching Figma bottom-left card */}
-        {/* <div className="p-4">
-          <div className="rounded-2xl bg-[#1c483a]/80 border border-[#275645] p-3.5 text-white shadow-xs">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#275645] flex items-center justify-center shrink-0">
-                <HelpCircle className="w-4 h-4 text-[#a3cbbd]" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-white">Need any help?</p>
-                <p className="text-[11px] text-[#9dc2b4] mt-0.5 leading-snug">
-                  Reach FEA portal support 24/7
-                </p>
-                <button
-                  onClick={() => alert('FEA SIS Support: info@federalexcellence.edu.ng | +234 803 456 7890')}
-                  className="mt-2 text-[11px] font-medium text-emerald-300 hover:text-white underline flex items-center gap-1"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  <span>Support Center</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div> */}
 
         {/* Mobile Quick Role Switcher */}
         <div className="p-4 border-t border-[#1f4a3c]/60 lg:hidden bg-[#103227]/40">

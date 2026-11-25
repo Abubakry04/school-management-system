@@ -8,26 +8,47 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { mockPaymentRecords, mockFeeStructures } from '../../data/mockData';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { ReceiptModal } from '../../components/ui/ReceiptModal';
 import { PaymentRecord } from '../../types';
 import { useToast } from '../../context/ToastContext';
+import { useData } from '../../context/DataContext';
+import { WardDropdown } from '../../components/parent/WardDropdown';
 
 export const ParentFeesPage: React.FC = () => {
   const { selectedWard, wards, setSelectedWardId } = useAuth();
   const { showToast } = useToast();
+  const { feeStructures, payments, addPayment, settings } = useData();
 
   const activeWard = selectedWard || wards[0];
-  const isSenior = activeWard.className.startsWith('SS');
-  const feeStructure = isSenior ? mockFeeStructures[0] : mockFeeStructures[1];
-
-  const paymentRecord = mockPaymentRecords.find((p) => p.studentId === activeWard.studentId) || mockPaymentRecords[0];
 
   const [selectedReceipt, setSelectedReceipt] = useState<PaymentRecord | null>(null);
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  if (!activeWard) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Bursary Statements & Clearance
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Official term receipts, bank payments, and clearance verification.
+          </p>
+        </div>
+        <div className="p-8 sm:p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">No Wards Registered</p>
+          <p className="text-xs text-slate-500 mt-1">There are currently no active students linked to your guardian account.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isSenior = activeWard.className.startsWith('SS');
+  const feeStructure = isSenior ? feeStructures[0] : feeStructures[1] || feeStructures[0];
+  const paymentRecord = payments.find((p) => p.studentId === activeWard.studentId) || null;
 
   const handleSimulatePayment = () => {
     setIsProcessing(true);
@@ -35,6 +56,23 @@ export const ParentFeesPage: React.FC = () => {
       setIsProcessing(false);
       setIsPayModalOpen(false);
       activeWard.feeBalance = 0;
+
+      addPayment({
+        studentId: activeWard.studentId,
+        studentName: activeWard.name,
+        admissionNo: activeWard.admissionNo,
+        className: activeWard.className,
+        amountPaid: 35000,
+        totalDue: feeStructure?.totalAmount || 290000,
+        balance: 0,
+        paymentDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        paymentMethod: 'Card Online',
+        status: 'Paid',
+        term: settings.currentTerm,
+        session: settings.currentSession,
+        recordedBy: 'Paystack Gateway (Online Clearance)',
+      });
+
       showToast(`Payment of ₦${(35000).toLocaleString()} for ${activeWard.name} successful!`, 'success');
     }, 800);
   };
@@ -52,21 +90,7 @@ export const ParentFeesPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
-          {wards.map((w) => (
-            <button
-              key={w.studentId}
-              onClick={() => setSelectedWardId(w.studentId)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                w.studentId === activeWard.studentId
-                  ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              {w.name.split(' ')[0]}
-            </button>
-          ))}
-        </div>
+        <WardDropdown />
       </div>
 
       {/* Outstanding Balance or Cleared Alert */}

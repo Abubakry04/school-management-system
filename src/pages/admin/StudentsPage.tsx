@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,6 +11,8 @@ import {
   GraduationCap,
   Download,
   CheckCircle,
+  Camera,
+  Upload,
 } from 'lucide-react';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Badge } from '../../components/ui/Badge';
@@ -18,8 +20,8 @@ import { Modal } from '../../components/ui/Modal';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { FormInput, FormSelect } from '../../components/ui/FormInputs';
 import { Student } from '../../types';
-import { mockStudents, mockClasses } from '../../data/mockData';
 import { useToast } from '../../context/ToastContext';
+import { useData } from '../../context/DataContext';
 
 const studentSchema = z.object({
   firstName: z.string().min(2, 'First name is required'),
@@ -38,11 +40,13 @@ type StudentFormData = z.infer<typeof studentSchema>;
 export const StudentsPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { students: studentsList, classes: mockClasses, addStudent, updateStudent, deleteStudent } = useData();
 
-  const [studentsList, setStudentsList] = useState<Student[]>(mockStudents);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [passportPreview, setPassportPreview] = useState<string>('');
+  const modalFileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -58,13 +62,38 @@ export const StudentsPage: React.FC = () => {
     },
   });
 
+  const handleModalPassportUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file (JPG, PNG, WebP)', 'error');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image size exceeds 5MB limit', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      if (base64) {
+        setPassportPreview(base64);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleOpenAdd = () => {
     setEditingStudent(null);
+    setPassportPreview('');
     reset({
       firstName: '',
       lastName: '',
       gender: 'Male',
-      classId: mockClasses[0].id,
+      classId: mockClasses[0]?.id || '',
       guardianName: '',
       guardianPhone: '',
       guardianEmail: '',
@@ -77,6 +106,7 @@ export const StudentsPage: React.FC = () => {
   const handleOpenEdit = (student: Student, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingStudent(student);
+    setPassportPreview(student.avatar || '');
     reset({
       firstName: student.firstName,
       lastName: student.lastName,
@@ -96,49 +126,19 @@ export const StudentsPage: React.FC = () => {
     const className = selectedClass ? selectedClass.name : 'JSS 1A';
 
     if (editingStudent) {
-      setStudentsList((prev) =>
-        prev.map((s) =>
-          s.id === editingStudent.id
-            ? {
-                ...s,
-                ...data,
-                fullName: `${data.firstName} ${data.lastName}`,
-                className,
-              }
-            : s
-        )
-      );
+      updateStudent(editingStudent.id, {
+        ...data,
+        className,
+        ...(passportPreview ? { avatar: passportPreview } : {}),
+      });
       showToast(`Student record for ${data.firstName} ${data.lastName} updated!`, 'success');
     } else {
-      const newStudent: Student = {
-        id: `stu-${Date.now()}`,
-        admissionNo: `FEA/2026/${Math.floor(100 + Math.random() * 900)}`,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        fullName: `${data.firstName} ${data.lastName}`,
-        gender: data.gender,
-        dob: '12th Oct, 2010',
-        classId: data.classId,
+      const created = addStudent({
+        ...data,
         className,
-        guardianName: data.guardianName,
-        guardianPhone: data.guardianPhone,
-        guardianEmail: data.guardianEmail,
-        address: 'Victoria Island, Lagos',
-        bloodGroup: 'O+',
-        stateOfOrigin: data.stateOfOrigin,
-        lga: 'Lagos Island',
-        avatar:
-          data.gender === 'Female'
-            ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-            : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-        status: data.status,
-        feeBalance: 0,
-        attendancePercentage: 100,
-        parentId: 'par-01',
-        enrolledDate: '10th Feb, 2026',
-      };
-      setStudentsList((prev) => [newStudent, ...prev]);
-      showToast(`New student ${newStudent.fullName} registered successfully!`, 'success');
+        avatar: passportPreview || `https://images.unsplash.com/photo-1544717305-2782549b5136?w=150`,
+      });
+      showToast(`New student ${created.fullName} registered successfully!`, 'success');
     }
 
     setIsModalOpen(false);
@@ -146,7 +146,7 @@ export const StudentsPage: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (!studentToDelete) return;
-    setStudentsList((prev) => prev.filter((s) => s.id !== studentToDelete.id));
+    deleteStudent(studentToDelete.id);
     showToast(`Student ${studentToDelete.fullName} removed from records.`, 'info');
     setStudentToDelete(null);
   };
@@ -333,6 +333,58 @@ export const StudentsPage: React.FC = () => {
         maxWidth="2xl"
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Passport Photograph Upload */}
+          <div className="flex items-center gap-4 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
+            <input
+              type="file"
+              ref={modalFileInputRef}
+              onChange={handleModalPassportUpload}
+              accept="image/*"
+              className="hidden"
+            />
+            <div className="relative group shrink-0">
+              {passportPreview ? (
+                <img
+                  src={passportPreview}
+                  alt="Student Passport Preview"
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-brand-500/30 shadow-xs"
+                />
+              ) : (
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 flex flex-col items-center justify-center border-2 border-dashed border-brand-200 dark:border-brand-800/60">
+                  <Camera className="w-6 h-6 mb-0.5" />
+                  <span className="text-[10px] font-semibold">Passport</span>
+                </div>
+              )}
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-slate-900 dark:text-white">
+                Student Passport Photograph
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Upload official portrait (JPG, PNG or WebP, max 5MB). Will appear on ID cards and official term reports.
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => modalFileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>{passportPreview ? 'Change Photo' : 'Select Photo'}</span>
+                </button>
+                {passportPreview && (
+                  <button
+                    type="button"
+                    onClick={() => setPassportPreview('')}
+                    className="text-[11px] text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormInput
               label="First Name"

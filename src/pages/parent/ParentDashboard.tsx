@@ -8,23 +8,73 @@ import {
   ArrowRight,
   Megaphone,
   Check,
+  GraduationCap,
 } from 'lucide-react';
 import { StatCard } from '../../components/ui/StatCard';
 import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
-import { mockAnnouncements } from '../../data/mockData';
+import { useData } from '../../context/DataContext';
 import { useToast } from '../../context/ToastContext';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { WardDropdown } from '../../components/parent/WardDropdown';
 
 export const ParentDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { selectedWard, wards, setSelectedWardId, user } = useAuth();
+  const { selectedWard, wards, setSelectedWardId, user, switchRole } = useAuth();
+  const { announcements, settings } = useData();
   const { showToast } = useToast();
 
   const activeWard = selectedWard || wards[0];
 
+  if (!activeWard) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Parent & Guardian Portal
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            {settings.schoolName} • Academic Session {settings.currentSession}
+          </p>
+        </div>
+
+        <div className="p-8 sm:p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm max-w-2xl mx-auto space-y-4">
+          <div className="w-16 h-16 rounded-3xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 flex items-center justify-center mx-auto">
+            <Users className="w-8 h-8" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              No Enrolled Wards Linked
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+              There are currently no active students registered under this parent profile. When students are enrolled or assigned to your guardian credentials, their progress reports, attendance, and fee clearances will display here.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => {
+                switchRole('admin');
+                navigate('/admin/students');
+              }}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition-colors"
+            >
+              Switch to Admin Console
+            </button>
+            <button
+              onClick={() => navigate('/parent/announcements')}
+              className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              View PTA Circulars
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header and Active Ward Selector */}
+      {/* Header and Ward Dropdown */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -32,7 +82,7 @@ export const ParentDashboard: React.FC = () => {
               Parent & Guardian Portal
             </h1>
             <Badge variant="brand" size="sm">
-              2 Wards Enrolled
+              {wards.length} Ward{wards.length !== 1 ? 's' : ''} Enrolled
             </Badge>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -40,31 +90,8 @@ export const ParentDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Clean Ward Selector */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700">
-          <span className="text-[11px] text-slate-500 font-mono px-1.5">Active Ward:</span>
-          {wards.map((ward) => {
-            const isSelected = ward.studentId === activeWard.studentId;
-            return (
-              <button
-                key={ward.studentId}
-                onClick={() => {
-                  setSelectedWardId(ward.studentId);
-                  showToast(`Viewing records for ${ward.name}`, 'info');
-                }}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${
-                  isSelected
-                    ? 'bg-white dark:bg-slate-900 text-brand-700 dark:text-brand-300 shadow-xs font-semibold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                <span>{ward.name.split(' ')[0]}</span>
-                <span className="text-[10px] text-slate-400">({ward.className})</span>
-                {isSelected && <Check className="w-3 h-3 text-brand-600" />}
-              </button>
-            );
-          })}
-        </div>
+        {/* Touch-sensitive Ward Dropdown */}
+        <WardDropdown />
       </div>
 
       {/* Selected Child KPI Row */}
@@ -109,7 +136,7 @@ export const ParentDashboard: React.FC = () => {
               Enrolled Children Status
             </h2>
             <span className="text-xs text-slate-400 font-mono">
-              Academic Session 2025/2026
+              Academic Session {settings.currentSession}
             </span>
           </div>
 
@@ -172,15 +199,22 @@ export const ParentDashboard: React.FC = () => {
             </div>
 
             <div className="space-y-2.5">
-              {mockAnnouncements.filter((a) => a.targetAudience === 'Parents' || a.targetAudience === 'All').map((a) => (
-                <div key={a.id} className="p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 text-xs">
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className="font-semibold text-slate-900 dark:text-white truncate">{a.title}</span>
-                    <Badge variant={a.priority === 'High' ? 'danger' : 'neutral'} size="sm">{a.priority}</Badge>
-                  </div>
-                  <p className="text-[11px] text-slate-500 line-clamp-2">{a.content}</p>
-                </div>
-              ))}
+              {announcements.filter((a) => a.targetAudience === 'Parents' || a.targetAudience === 'All').length === 0 ? (
+                <p className="text-xs text-slate-400 py-4 text-center">No PTA notices published.</p>
+              ) : (
+                announcements
+                  .filter((a) => a.targetAudience === 'Parents' || a.targetAudience === 'All')
+                  .slice(0, 3)
+                  .map((a) => (
+                    <div key={a.id} className="p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 text-xs">
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <span className="font-semibold text-slate-900 dark:text-white truncate">{a.title}</span>
+                        <Badge variant={a.priority === 'High' ? 'danger' : 'neutral'} size="sm">{a.priority}</Badge>
+                      </div>
+                      <p className="text-[11px] text-slate-500 line-clamp-2">{a.content}</p>
+                    </div>
+                  ))
+              )}
             </div>
           </div>
 
@@ -189,7 +223,7 @@ export const ParentDashboard: React.FC = () => {
               onClick={() => navigate('/parent/announcements')}
               className="text-xs font-medium text-brand-700 dark:text-brand-400 hover:underline"
             >
-              Browse All Circulars &rarr;
+              Noticeboard Archive &rarr;
             </button>
           </div>
         </div>

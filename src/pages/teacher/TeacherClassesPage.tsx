@@ -1,28 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  BookOpen,
-  Users,
   CalendarCheck,
   FileSpreadsheet,
   Phone,
-  Mail,
-  GraduationCap,
 } from 'lucide-react';
-import { mockClasses, mockStudents } from '../../data/mockData';
 import { Badge } from '../../components/ui/Badge';
+import { useData } from '../../context/DataContext';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export const TeacherClassesPage: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedClassId, setSelectedClassId] = useState('cls-06'); // SS 2 Science
+  const { classes: allClasses, students } = useData();
+  const [selectedClassId, setSelectedClassId] = useState(allClasses[0]?.id || 'cls-01');
 
-  // Teacher's classes
-  const teacherClasses = mockClasses.filter((c) =>
-    ['SS 2 Science', 'SS 3 Science'].includes(c.name)
-  );
-
-  const activeClass = teacherClasses.find((c) => c.id === selectedClassId) || teacherClasses[0];
-  const classStudents = mockStudents.filter((s) => s.classId === activeClass.id);
+  const activeClass = allClasses.find((c) => c.id === selectedClassId) || allClasses[0];
+  const classStudents = students.filter((s) => s.classId === activeClass?.id);
 
   return (
     <div className="space-y-6">
@@ -38,9 +31,9 @@ export const TeacherClassesPage: React.FC = () => {
 
       {/* Class Selector Tabs */}
       <div className="flex flex-wrap gap-3">
-        {teacherClasses.map((cls) => {
-          const isSelected = cls.id === selectedClassId;
-          const isFormTeacher = cls.classTeacherId === 'tch-01';
+        {allClasses.map((cls) => {
+          const isSelected = cls.id === activeClass?.id;
+          const currentCount = students.filter((s) => s.classId === cls.id).length;
 
           return (
             <button
@@ -56,12 +49,12 @@ export const TeacherClassesPage: React.FC = () => {
                 <span className="font-bold text-sm text-slate-900 dark:text-white">
                   {cls.name}
                 </span>
-                {isFormTeacher && (
-                  <Badge variant="brand" size="sm">Form Class</Badge>
-                )}
+                <Badge variant={cls.level === 'Senior' ? 'brand' : 'neutral'} size="sm">
+                  {cls.level}
+                </Badge>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {cls.studentCount} Students • {cls.room}
+                {currentCount} Students • {cls.room}
               </p>
             </button>
           );
@@ -72,7 +65,7 @@ export const TeacherClassesPage: React.FC = () => {
       <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-            Roster: {activeClass.name}
+            Roster: {activeClass?.name || 'Class Arm'}
           </h3>
           <p className="text-xs text-slate-400">
             {classStudents.length} students enrolled in active registry
@@ -99,54 +92,61 @@ export const TeacherClassesPage: React.FC = () => {
 
       {/* Student Roster Table */}
       <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase font-bold tracking-wider">
-              <th className="py-3 px-3">Student Name</th>
-              <th className="py-3 px-3">Admission No</th>
-              <th className="py-3 px-3">Gender</th>
-              <th className="py-3 px-3">Attendance %</th>
-              <th className="py-3 px-3">Guardian Contact</th>
-              <th className="py-3 px-3 text-right">Fee Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:border-slate-800">
-            {classStudents.map((s) => (
-              <tr key={s.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                <td className="py-3 px-3">
-                  <div className="flex items-center gap-2.5">
-                    <img
-                      src={s.avatar}
-                      alt={s.fullName}
-                      className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200"
-                    />
-                    <span className="font-semibold text-slate-900 dark:text-white">
-                      {s.fullName}
-                    </span>
-                  </div>
-                </td>
-                <td className="py-3 px-3 font-mono text-slate-400">{s.admissionNo}</td>
-                <td className="py-3 px-3 text-slate-600 dark:text-slate-400">{s.gender}</td>
-                <td className="py-3 px-3">
-                  <span className="font-semibold text-brand-600 dark:text-brand-400">
-                    {s.attendancePercentage}%
-                  </span>
-                </td>
-                <td className="py-3 px-3 text-slate-600 dark:text-slate-300">
-                  <div className="flex items-center gap-1.5">
-                    <Phone className="w-3 h-3 text-slate-400" />
-                    <span>{s.guardianPhone}</span>
-                  </div>
-                </td>
-                <td className="py-3 px-3 text-right">
-                  <Badge variant={s.feeBalance === 0 ? 'success' : 'warning'} size="sm">
-                    {s.feeBalance === 0 ? 'Cleared' : 'Pending'}
-                  </Badge>
-                </td>
+        {classStudents.length === 0 ? (
+          <EmptyState
+            title={`No Students Enrolled in ${activeClass?.name || 'this class'}`}
+            description="Students enrolled by administrators into this class arm will appear here."
+          />
+        ) : (
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase font-bold tracking-wider">
+                <th className="py-3 px-3">Student Name</th>
+                <th className="py-3 px-3">Admission No</th>
+                <th className="py-3 px-3">Gender</th>
+                <th className="py-3 px-3">Attendance %</th>
+                <th className="py-3 px-3">Guardian Contact</th>
+                <th className="py-3 px-3 text-right">Fee Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:border-slate-800">
+              {classStudents.map((s) => (
+                <tr key={s.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                  <td className="py-3 px-3">
+                    <div className="flex items-center gap-2.5">
+                      <img
+                        src={s.avatar}
+                        alt={s.fullName}
+                        className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200"
+                      />
+                      <span className="font-semibold text-slate-900 dark:text-white">
+                        {s.fullName}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-3 font-mono text-slate-400">{s.admissionNo}</td>
+                  <td className="py-3 px-3 text-slate-600 dark:text-slate-400">{s.gender}</td>
+                  <td className="py-3 px-3">
+                    <span className="font-semibold text-brand-600 dark:text-brand-400">
+                      {s.attendancePercentage || 100}%
+                    </span>
+                  </td>
+                  <td className="py-3 px-3 text-slate-600 dark:text-slate-300">
+                    <div className="flex items-center gap-1.5">
+                      <Phone className="w-3 h-3 text-slate-400" />
+                      <span>{s.guardianPhone}</span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-3 text-right">
+                    <Badge variant={s.feeBalance === 0 ? 'success' : 'warning'} size="sm">
+                      {s.feeBalance === 0 ? 'Cleared' : 'Pending'}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

@@ -1,12 +1,16 @@
 import React from 'react';
 import { Calendar, Clock, Printer, Download } from 'lucide-react';
-import { mockTimetableSlots } from '../../data/mockData';
 import { useToast } from '../../context/ToastContext';
+import { useData } from '../../context/DataContext';
 
 export const TeacherTimetablePage: React.FC = () => {
   const { showToast } = useToast();
+  const { timetable, teachers } = useData();
+  const currentTeacher = teachers[0];
 
-  const teacherSlots = mockTimetableSlots.filter((slot) => slot.teacherId === 'tch-01');
+  const teacherSlots = timetable.filter((slot) =>
+    currentTeacher ? slot.teacherId === currentTeacher.id : true
+  );
 
   const days: ('Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday')[] = [
     'Monday',

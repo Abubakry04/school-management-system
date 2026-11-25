@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -13,19 +13,68 @@ import {
   Printer,
   FileText,
   CreditCard,
+  Camera,
 } from 'lucide-react';
-import { mockStudents, mockGrades, mockPaymentRecords } from '../../data/mockData';
 import { Badge } from '../../components/ui/Badge';
 import { useToast } from '../../context/ToastContext';
+import { useData } from '../../context/DataContext';
 
 export const StudentProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { students, grades: allGrades, payments: allPayments, updateStudent } = useData();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const student = mockStudents.find((s) => s.id === id) || mockStudents[0];
-  const grades = mockGrades.filter((g) => g.studentId === student.id);
-  const payments = mockPaymentRecords.filter((p) => p.studentId === student.id);
+  const student = students.find((s) => s.id === id) || students[0];
+  const grades = allGrades.filter((g) => g.studentId === student?.id);
+  const payments = allPayments.filter((p) => p.studentId === student?.id);
+
+  const handlePassportUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file (JPG, PNG, WebP)', 'error');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image size exceeds 5MB limit', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      if (base64 && student) {
+        updateStudent(student.id, { avatar: base64 });
+        showToast(`Passport photograph for ${student.fullName} updated!`, 'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  if (!student) {
+    return (
+      <div className="space-y-6">
+        <button
+          onClick={() => navigate('/admin/students')}
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Students List</span>
+        </button>
+        <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
+          <GraduationCap className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Student Record Not Found</h2>
+          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            The student dossier you are attempting to view does not exist or has been removed from the registry.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const calculateAverage = () => {
     if (grades.length === 0) return '85.4';
@@ -66,11 +115,36 @@ export const StudentProfilePage: React.FC = () => {
       {/* Main Profile Header Card */}
       <div className="p-6 sm:p-8 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-          <img
-            src={student.avatar}
-            alt={student.fullName}
-            className="w-24 h-24 rounded-3xl object-cover ring-4 ring-brand-500/20 shadow-md"
-          />
+          <div className="relative group shrink-0">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handlePassportUpload}
+              accept="image/*"
+              className="hidden"
+            />
+            {student.avatar ? (
+              <img
+                src={student.avatar}
+                alt={student.fullName}
+                className="w-24 h-24 rounded-3xl object-cover ring-4 ring-brand-500/20 shadow-md"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-3xl bg-brand-100 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 font-bold text-2xl flex items-center justify-center ring-4 ring-brand-500/20">
+                {student.firstName[0]}
+                {student.lastName[0]}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute -bottom-1 -right-1 p-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md active:scale-95 transition-all touch-manipulation cursor-pointer"
+              title="Upload / Change Passport Photograph"
+              aria-label="Upload passport photograph"
+            >
+              <Camera className="w-4 h-4" />
+            </button>
+          </div>
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-1.5">
               <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">

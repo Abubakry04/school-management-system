@@ -12,12 +12,12 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Announcement } from '../../types';
-import { mockAnnouncements } from '../../data/mockData';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { FormInput, FormSelect, FormTextarea } from '../../components/ui/FormInputs';
 import { useToast } from '../../context/ToastContext';
+import { useData } from '../../context/DataContext';
 
 const announcementSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
@@ -30,7 +30,7 @@ type AnnouncementFormData = z.infer<typeof announcementSchema>;
 
 export const AnnouncementsPage: React.FC = () => {
   const { showToast } = useToast();
-  const [announcements, setAnnouncements] = useState<Announcement[]>(mockAnnouncements);
+  const { announcements, addAnnouncement, deleteAnnouncement } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<Announcement | null>(null);
   const [audienceFilter, setAudienceFilter] = useState('All');
@@ -54,19 +54,16 @@ export const AnnouncementsPage: React.FC = () => {
   });
 
   const onSubmit = (data: AnnouncementFormData) => {
-    const newAnnouncement: Announcement = {
-      id: `anc-${Date.now()}`,
+    addAnnouncement({
       title: data.title,
       content: data.content,
       targetAudience: data.targetAudience,
       author: 'Dr. (Mrs.) Funmilayo Adeleke',
       authorRole: 'Principal',
-      date: '16th Feb, 2026',
       priority: data.priority,
       pinned: data.priority === 'High',
-    };
+    });
 
-    setAnnouncements((prev) => [newAnnouncement, ...prev]);
     showToast('Broadcast published to community portals!', 'success');
     setIsModalOpen(false);
     reset();
@@ -74,7 +71,7 @@ export const AnnouncementsPage: React.FC = () => {
 
   const handleDelete = () => {
     if (!itemToDelete) return;
-    setAnnouncements((prev) => prev.filter((a) => a.id !== itemToDelete.id));
+    deleteAnnouncement(itemToDelete.id);
     showToast('Announcement removed', 'info');
     setItemToDelete(null);
   };

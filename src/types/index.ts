@@ -184,3 +184,64 @@ export interface ParentProfile {
   address: string;
   wards: ParentWard[];
 }
+
+export interface Subject {
+  id: string;
+  code: string;
+  name: string;
+  department: 'Sciences' | 'Arts & Humanities' | 'Commercial' | 'Languages' | 'Vocational';
+  level: 'Junior' | 'Senior' | 'All';
+  periodsPerWeek: number;
+  passMark: number;
+  headTeacherId?: string;
+  headTeacherName?: string;
+}
+
+export interface AdmissionApplicant {
+  id: string;
+  applicationNo: string;
+  studentName: string;
+  gender: 'Male' | 'Female';
+  targetClass: string;
+  guardianName: string;
+  guardianPhone: string;
+  guardianEmail: string;
+  applicationDate: string;
+  status: 'Pending Review' | 'Exam Scheduled' | 'Interview' | 'Offered Admission' | 'Enrolled' | 'Rejected';
+  entranceScore?: number;
+}
+
+export interface Assignment {
+  id: string;
+  title: string;
+  subject: string;
+  classId: string;
+  className: string;
+  teacherId: string;
+  teacherName: string;
+  dueDate: string;
+  maxScore: number;
+  description: string;
+  createdAt: string;
+}
+
+export interface AssignmentSubmission {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  studentName: string;
+  submissionDate: string;
+  content: string;
+  score?: number;
+  feedback?: string;
+  status: 'Submitted' | 'Graded' | 'Pending';
+}
+
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  action: string;
+  category: 'Students' | 'Staff' | 'Academics' | 'Finance' | 'Settings';
+  performedBy: string;
+  details: string;
+}

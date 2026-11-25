@@ -2,10 +2,30 @@ import React from 'react';
 import { CalendarCheck, CheckCircle2, Clock, XCircle, Calendar } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Badge } from '../../components/ui/Badge';
+import { WardDropdown } from '../../components/parent/WardDropdown';
 
 export const ParentAttendancePage: React.FC = () => {
   const { selectedWard, wards, setSelectedWardId } = useAuth();
   const activeWard = selectedWard || wards[0];
+
+  if (!activeWard) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Ward Attendance History
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Track daily arrival timestamps and gate check-in logs.
+          </p>
+        </div>
+        <div className="p-8 sm:p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">No Wards Registered</p>
+          <p className="text-xs text-slate-500 mt-1">There are currently no active students linked to your guardian account.</p>
+        </div>
+      </div>
+    );
+  }
 
   const attendanceLog = [
     { date: '16th Feb, 2026', day: 'Monday', status: 'Present', arrival: '07:42 AM', remark: 'Punctual' },
@@ -29,21 +49,7 @@ export const ParentAttendancePage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
-          {wards.map((w) => (
-            <button
-              key={w.studentId}
-              onClick={() => setSelectedWardId(w.studentId)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                w.studentId === activeWard.studentId
-                  ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              {w.name.split(' ')[0]}
-            </button>
-          ))}
-        </div>
+        <WardDropdown />
       </div>
 
       {/* Metrics Row */}

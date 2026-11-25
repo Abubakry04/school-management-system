@@ -10,15 +10,37 @@ import {
   GraduationCap,
   Award,
 } from 'lucide-react';
-import { mockTeachers, mockTimetableSlots } from '../../data/mockData';
 import { Badge } from '../../components/ui/Badge';
+import { useData } from '../../context/DataContext';
 
 export const TeacherProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { teachers, timetable } = useData();
 
-  const teacher = mockTeachers.find((t) => t.id === id) || mockTeachers[0];
-  const teacherPeriods = mockTimetableSlots.filter((slot) => slot.teacherId === teacher.id);
+  const teacher = teachers.find((t) => t.id === id) || teachers[0];
+  const teacherPeriods = timetable.filter((slot) => slot.teacherId === teacher?.id);
+
+  if (!teacher) {
+    return (
+      <div className="space-y-6">
+        <button
+          onClick={() => navigate('/admin/teachers')}
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Faculty List</span>
+        </button>
+        <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
+          <GraduationCap className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Faculty Record Not Found</h2>
+          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            The teacher profile you are attempting to view does not exist or has been removed from faculty registry.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -8,12 +8,13 @@ import {
   Filter,
   Download,
 } from 'lucide-react';
-import { mockAttendanceRecords, mockClasses, mockStudents } from '../../data/mockData';
 import { Badge } from '../../components/ui/Badge';
 import { useToast } from '../../context/ToastContext';
+import { useData } from '../../context/DataContext';
 
 export const AttendancePage: React.FC = () => {
   const { showToast } = useToast();
+  const { attendance: mockAttendanceRecords, classes: mockClasses, students: mockStudents } = useData();
   const [selectedDate, setSelectedDate] = useState('2026-02-16');
   const [selectedClassId, setSelectedClassId] = useState('all');
 

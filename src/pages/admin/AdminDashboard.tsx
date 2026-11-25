@@ -14,9 +14,14 @@ import {
   X,
   Sparkles,
   ArrowUpRight,
+  BookMarked,
+  CreditCard,
+  FileText,
+  UserPlus,
 } from 'lucide-react';
 import { StatCard } from '../../components/ui/StatCard';
 import { useToast } from '../../context/ToastContext';
+import { useData } from '../../context/DataContext';
 
 interface ScheduleItem {
   id: string;
@@ -46,18 +51,23 @@ interface AttendanceDay {
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { students, teachers, payments, attendance, applicants, classes, addStudent } = useData();
 
   // Add Student Modal State
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [studentForm, setStudentForm] = useState({
     firstName: '',
     lastName: '',
-    classGrade: 'SS 2 Science',
+    classGrade: classes[0]?.name || 'SS 2 Science',
     gender: 'Female',
     guardianName: '',
     guardianEmail: '',
     guardianPhone: '',
   });
+
+  const totalRevenue = payments.reduce((acc, p) => acc + p.amountPaid, 0);
+  const activeStudentsCount = students.filter((s) => s.status === 'Active').length;
+  const pendingAdmissionsCount = applicants.filter((a) => a.status === 'Pending Review' || a.status === 'Exam Scheduled').length;
 
   // Schedule data matching Figma
   const [scheduleItems] = useState<ScheduleItem[]>([
@@ -171,19 +181,33 @@ export const AdminDashboard: React.FC = () => {
 
   const handleAddStudentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentForm.firstName || !studentForm.lastName) {
+    if (!studentForm.firstName.trim() || !studentForm.lastName.trim()) {
       showToast('Please enter student first and last name', 'error');
       return;
     }
+
+    const targetClass = classes.find((c) => c.name === studentForm.classGrade) || classes[0];
+    const created = addStudent({
+      firstName: studentForm.firstName.trim(),
+      lastName: studentForm.lastName.trim(),
+      gender: studentForm.gender as 'Male' | 'Female',
+      classId: targetClass ? targetClass.id : 'cls-01',
+      className: targetClass ? targetClass.name : studentForm.classGrade,
+      guardianName: studentForm.guardianName || 'Guardian',
+      guardianPhone: studentForm.guardianPhone || '+234 800 000 0000',
+      guardianEmail: studentForm.guardianEmail || 'parent@example.com',
+      status: 'Active',
+    });
+
     showToast(
-      `Successfully enrolled ${studentForm.firstName} ${studentForm.lastName} into ${studentForm.classGrade}!`,
+      `Successfully enrolled ${created.fullName} (${created.admissionNo}) into ${created.className}!`,
       'success'
     );
     setIsAddStudentOpen(false);
     setStudentForm({
       firstName: '',
       lastName: '',
-      classGrade: 'SS 2 Science',
+      classGrade: classes[0]?.name || 'SS 2 Science',
       gender: 'Female',
       guardianName: '',
       guardianEmail: '',
@@ -219,12 +243,71 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 4 Primary Metric Cards matching Figma */}
+      {/* Quick Launchpad matching modern SIS */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <button
+          type="button"
+          onClick={() => navigate('/admin/admissions')}
+          className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/60 transition-all flex items-center gap-3 text-left shadow-xs group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <UserPlus className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="block text-xs font-bold text-slate-900 dark:text-white truncate">Admissions Hub</span>
+            <span className="block text-[11px] text-slate-500 truncate">{pendingAdmissionsCount} pending intake</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/admin/results')}
+          className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500/60 transition-all flex items-center gap-3 text-left shadow-xs group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="block text-xs font-bold text-slate-900 dark:text-white truncate">Report Cards</span>
+            <span className="block text-[11px] text-slate-500 truncate">Print term sheets</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/admin/subjects')}
+          className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-purple-500/60 transition-all flex items-center gap-3 text-left shadow-xs group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <BookMarked className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="block text-xs font-bold text-slate-900 dark:text-white truncate">Curriculum</span>
+            <span className="block text-[11px] text-slate-500 truncate">Manage subjects</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/admin/fees')}
+          className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-500/60 transition-all flex items-center gap-3 text-left shadow-xs group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <CreditCard className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="block text-xs font-bold text-slate-900 dark:text-white truncate">Bursary Clearance</span>
+            <span className="block text-[11px] text-slate-500 truncate">{payments.length} verified receipts</span>
+          </div>
+        </button>
+      </div>
+
+      {/* 4 Primary Metric Cards dynamically wired to live SIS DataContext */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard
           title="Total students"
-          value="1,248"
-          trend={{ value: '+4.6% this year', positive: true }}
+          value={students.length.toLocaleString()}
+          trend={{ value: `${activeStudentsCount} Active in SIS`, positive: true }}
           icon={Users}
           iconBg="bg-[#e6f4ea] dark:bg-emerald-950/60"
           iconColor="text-[#166534] dark:text-emerald-400"
@@ -233,8 +316,8 @@ export const AdminDashboard: React.FC = () => {
 
         <StatCard
           title="Teaching staff"
-          value="86"
-          subtitle="4 currently away"
+          value={teachers.length.toString()}
+          subtitle={`${classes.length} classroom arms`}
           icon={GraduationCap}
           iconBg="bg-[#e8f0fe] dark:bg-blue-950/60"
           iconColor="text-[#2563eb] dark:text-blue-400"
@@ -242,23 +325,23 @@ export const AdminDashboard: React.FC = () => {
         />
 
         <StatCard
-          title="Attendance rate"
-          value="94.2%"
-          trend={{ value: '+1.8% this month', positive: true }}
-          icon={BarChart2}
+          title="Bursary collections"
+          value={`₦${(totalRevenue / 1000000).toFixed(1)}M`}
+          trend={{ value: `${payments.length} receipts`, positive: true }}
+          icon={CreditCard}
           iconBg="bg-[#fef0e6] dark:bg-amber-950/60"
           iconColor="text-[#ea580c] dark:text-amber-400"
-          onClick={() => navigate('/admin/attendance')}
+          onClick={() => navigate('/admin/fees')}
         />
 
         <StatCard
-          title="Open requests"
-          value="12"
-          subtitle="3 need attention"
-          icon={ClipboardList}
+          title="Candidate pipeline"
+          value={applicants.length.toString()}
+          subtitle={`${pendingAdmissionsCount} awaiting entrance exam`}
+          icon={UserPlus}
           iconBg="bg-[#f3e8fd] dark:bg-purple-950/60"
           iconColor="text-[#9333ea] dark:text-purple-400"
-          onClick={() => navigate('/admin/announcements')}
+          onClick={() => navigate('/admin/admissions')}
         />
       </div>
 
@@ -540,6 +623,130 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Live Activity Feed: Recent Enrollments & Bursary Clearances */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Enrollments */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-[#e8ede9] dark:border-slate-800 p-6 shadow-xs">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
+                <Users className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Recent Student Enrollments</h3>
+                <p className="text-[11px] text-slate-500">Live admissions registered in FEA SIS</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/students')}
+              className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"
+            >
+              <span>View all</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {students.length === 0 ? (
+              <div className="text-center py-6 px-4">
+                <Users className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">No students enrolled yet</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Use the "Add new student" button above to register an enrollment.</p>
+              </div>
+            ) : (
+              students.slice(0, 4).map((s) => (
+                <div
+                  key={s.id}
+                  onClick={() => navigate(`/admin/students/${s.id}`)}
+                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src={s.avatar}
+                      alt={s.fullName}
+                      className="w-9 h-9 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-slate-900 dark:text-white truncate group-hover:text-emerald-700 transition-colors">
+                        {s.fullName}
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-mono">{s.admissionNo}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
+                      {s.className}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Recent Bursary Payments */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-[#e8ede9] dark:border-slate-800 p-6 shadow-xs">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 flex items-center justify-center">
+                <CreditCard className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Recent Fee Clearances</h3>
+                <p className="text-[11px] text-slate-500">Latest bursary receipts & settlements</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/fees')}
+              className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"
+            >
+              <span>View ledger</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {payments.length === 0 ? (
+              <div className="text-center py-6 px-4">
+                <CreditCard className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">No payment receipts recorded</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Payments recorded in the Bursary module will reflect here.</p>
+              </div>
+            ) : (
+              payments.slice(0, 4).map((p) => (
+                <div
+                  key={p.id}
+                  onClick={() => navigate('/admin/fees')}
+                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer group"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-900 dark:text-white truncate group-hover:text-emerald-700 transition-colors">
+                      {p.studentName}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-mono">
+                      {p.receiptNumber} • {p.paymentMethod}
+                    </p>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <p className="text-xs font-black text-slate-900 dark:text-white">
+                      ₦{p.amountPaid.toLocaleString()}
+                    </p>
+                    <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+                      {p.status}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Modal: + Add New Student matching Figma action button */}
       {isAddStudentOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
@@ -607,12 +814,11 @@ export const AdminDashboard: React.FC = () => {
                     }
                     className="w-full text-xs px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
                   >
-                    <option value="JSS 1A">JSS 1A</option>
-                    <option value="JSS 2A">JSS 2A</option>
-                    <option value="JSS 3A">JSS 3A</option>
-                    <option value="SS 1 Science">SS 1 Science</option>
-                    <option value="SS 2 Science">SS 2 Science</option>
-                    <option value="SS 3 Science">SS 3 Science</option>
+                    {classes.map((cls) => (
+                      <option key={cls.id} value={cls.name}>
+                        {cls.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FileSpreadsheet,
   Save,
@@ -6,8 +6,9 @@ import {
   Award,
   Filter,
 } from 'lucide-react';
-import { mockStudents } from '../../data/mockData';
 import { useToast } from '../../context/ToastContext';
+import { useData } from '../../context/DataContext';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 interface EditableScoreRow {
   studentId: string;
@@ -32,16 +33,22 @@ const calculateGradeAndRemark = (total: number) => {
 
 export const TeacherGradesPage: React.FC = () => {
   const { showToast } = useToast();
-  const [selectedSubject, setSelectedSubject] = useState('Physics');
-  const [selectedClass, setSelectedClass] = useState('SS 2 Science');
+  const { students: allStudents, classes, subjects, settings, grades, saveGrade } = useData();
+  const [selectedSubject, setSelectedSubject] = useState(subjects[0]?.name || 'General Mathematics');
+  const [selectedClass, setSelectedClass] = useState(classes[0]?.name || 'JSS 1A');
 
-  const classStudents = mockStudents.filter((s) => s.className === selectedClass);
+  const classStudents = allStudents.filter((s) => s.className === selectedClass);
+  const [scores, setScores] = useState<EditableScoreRow[]>([]);
 
-  const [scores, setScores] = useState<EditableScoreRow[]>(() =>
-    classStudents.map((s, idx) => {
-      const ca1 = idx === 0 ? 19 : 16;
-      const ca2 = idx === 0 ? 17 : 15;
-      const exam = idx === 0 ? 55 : 48;
+  useEffect(() => {
+    const rows = classStudents.map((s) => {
+      const existingGrade = grades.find(
+        (g) => g.studentId === s.id && g.subject === selectedSubject && g.term === settings.currentTerm
+      );
+
+      const ca1 = existingGrade ? existingGrade.ca1 : 0;
+      const ca2 = existingGrade ? existingGrade.ca2 : 0;
+      const exam = existingGrade ? existingGrade.exam : 0;
       const total = ca1 + ca2 + exam;
       const { grade, remark } = calculateGradeAndRemark(total);
 
@@ -56,40 +63,56 @@ export const TeacherGradesPage: React.FC = () => {
         grade,
         remark,
       };
-    })
-  );
+    });
+    setScores(rows);
+  }, [selectedClass, selectedSubject, allStudents, grades, settings.currentTerm]);
 
   const handleScoreChange = (
     studentId: string,
     field: 'ca1' | 'ca2' | 'exam',
     value: string
   ) => {
-    const numVal = Math.max(0, parseInt(value, 10) || 0);
+    const numValue = Math.max(0, Math.min(field === 'exam' ? 60 : 20, Number(value) || 0));
 
     setScores((prev) =>
       prev.map((row) => {
-        if (row.studentId !== studentId) return row;
-
-        const maxLimits = { ca1: 20, ca2: 20, exam: 60 };
-        const cappedVal = Math.min(numVal, maxLimits[field]);
-
-        const updatedRow = { ...row, [field]: cappedVal };
-        const total = updatedRow.ca1 + updatedRow.ca2 + updatedRow.exam;
-        const { grade, remark } = calculateGradeAndRemark(total);
-
-        return {
-          ...updatedRow,
-          total,
-          grade,
-          remark,
-        };
+        if (row.studentId === studentId) {
+          const updated = { ...row, [field]: numValue };
+          updated.total = updated.ca1 + updated.ca2 + updated.exam;
+          const { grade, remark } = calculateGradeAndRemark(updated.total);
+          updated.grade = grade;
+          updated.remark = remark;
+          return updated;
+        }
+        return row;
       })
     );
   };
 
   const handleSaveAll = () => {
+    if (scores.length === 0) {
+      showToast('No student score entries to save', 'info');
+      return;
+    }
+    const targetClass = classes.find((c) => c.name === selectedClass);
+
+    scores.forEach((row) => {
+      saveGrade({
+        studentId: row.studentId,
+        studentName: row.name,
+        admissionNo: row.admissionNo,
+        classId: targetClass ? targetClass.id : 'cls-01',
+        subject: selectedSubject,
+        ca1: row.ca1,
+        ca2: row.ca2,
+        exam: row.exam,
+        term: settings.currentTerm,
+        session: settings.currentSession,
+      });
+    });
+
     showToast(
-      `Scores compiled and saved successfully for ${selectedSubject} (${selectedClass})!`,
+      `Assessment entries for ${scores.length} students in ${selectedClass} saved!`,
       'success'
     );
   };
@@ -128,8 +151,11 @@ export const TeacherGradesPage: React.FC = () => {
               onChange={(e) => setSelectedSubject(e.target.value)}
               className="px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
-              <option value="Physics">Physics</option>
-              <option value="Further Mathematics">Further Mathematics</option>
+              {subjects.map((s) => (
+                <option key={s.id} value={s.name}>
+                  {s.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -142,8 +168,11 @@ export const TeacherGradesPage: React.FC = () => {
               onChange={(e) => setSelectedClass(e.target.value)}
               className="px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
-              <option value="SS 2 Science">SS 2 Science</option>
-              <option value="SS 3 Science">SS 3 Science</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -155,81 +184,88 @@ export const TeacherGradesPage: React.FC = () => {
 
       {/* Editable Scores Table */}
       <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase font-bold tracking-wider">
-              <th className="py-3 px-3">Student</th>
-              <th className="py-3 px-3 font-mono">Admission No</th>
-              <th className="py-3 px-3 text-center w-28">CA 1 (Max 20)</th>
-              <th className="py-3 px-3 text-center w-28">CA 2 (Max 20)</th>
-              <th className="py-3 px-3 text-center w-28">Exam (Max 60)</th>
-              <th className="py-3 px-3 text-center font-bold">Total (100)</th>
-              <th className="py-3 px-3 text-center">Grade</th>
-              <th className="py-3 px-3">Academic Remark</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:border-slate-800">
-            {scores.map((row) => (
-              <tr key={row.studentId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white">
-                  {row.name}
-                </td>
-                <td className="py-3 px-3 font-mono text-slate-400">
-                  {row.admissionNo}
-                </td>
-                <td className="py-3 px-3 text-center">
-                  <input
-                    type="number"
-                    min="0"
-                    max="20"
-                    value={row.ca1}
-                    onChange={(e) => handleScoreChange(row.studentId, 'ca1', e.target.value)}
-                    className="w-16 px-2 py-1 text-center font-bold text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  />
-                </td>
-                <td className="py-3 px-3 text-center">
-                  <input
-                    type="number"
-                    min="0"
-                    max="20"
-                    value={row.ca2}
-                    onChange={(e) => handleScoreChange(row.studentId, 'ca2', e.target.value)}
-                    className="w-16 px-2 py-1 text-center font-bold text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  />
-                </td>
-                <td className="py-3 px-3 text-center">
-                  <input
-                    type="number"
-                    min="0"
-                    max="60"
-                    value={row.exam}
-                    onChange={(e) => handleScoreChange(row.studentId, 'exam', e.target.value)}
-                    className="w-16 px-2 py-1 text-center font-bold text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  />
-                </td>
-                <td className="py-3 px-3 text-center font-bold text-base text-brand-600 dark:text-brand-400">
-                  {row.total}
-                </td>
-                <td className="py-3 px-3 text-center">
-                  <span
-                    className={`inline-block px-2.5 py-1 rounded font-black text-xs ${
-                      row.grade === 'A'
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                        : row.grade === 'B'
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                    }`}
-                  >
-                    {row.grade}
-                  </span>
-                </td>
-                <td className="py-3 px-3 text-slate-600 dark:text-slate-400 italic">
-                  {row.remark}
-                </td>
+        {scores.length === 0 ? (
+          <EmptyState
+            title={`No Students in ${selectedClass}`}
+            description="Students enrolled into this class will appear here for score entry."
+          />
+        ) : (
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase font-bold tracking-wider">
+                <th className="py-3 px-3">Student</th>
+                <th className="py-3 px-3 font-mono">Admission No</th>
+                <th className="py-3 px-3 text-center w-28">CA 1 (Max 20)</th>
+                <th className="py-3 px-3 text-center w-28">CA 2 (Max 20)</th>
+                <th className="py-3 px-3 text-center w-28">Exam (Max 60)</th>
+                <th className="py-3 px-3 text-center font-bold">Total (100)</th>
+                <th className="py-3 px-3 text-center">Grade</th>
+                <th className="py-3 px-3">Academic Remark</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:border-slate-800">
+              {scores.map((row) => (
+                <tr key={row.studentId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                  <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white">
+                    {row.name}
+                  </td>
+                  <td className="py-3 px-3 font-mono text-slate-400">
+                    {row.admissionNo}
+                  </td>
+                  <td className="py-3 px-3 text-center">
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={row.ca1}
+                      onChange={(e) => handleScoreChange(row.studentId, 'ca1', e.target.value)}
+                      className="w-16 px-2 py-1 text-center font-bold text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </td>
+                  <td className="py-3 px-3 text-center">
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={row.ca2}
+                      onChange={(e) => handleScoreChange(row.studentId, 'ca2', e.target.value)}
+                      className="w-16 px-2 py-1 text-center font-bold text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </td>
+                  <td className="py-3 px-3 text-center">
+                    <input
+                      type="number"
+                      min="0"
+                      max="60"
+                      value={row.exam}
+                      onChange={(e) => handleScoreChange(row.studentId, 'exam', e.target.value)}
+                      className="w-16 px-2 py-1 text-center font-bold text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </td>
+                  <td className="py-3 px-3 text-center font-bold text-base text-brand-600 dark:text-brand-400">
+                    {row.total}
+                  </td>
+                  <td className="py-3 px-3 text-center">
+                    <span
+                      className={`inline-block px-2.5 py-1 rounded font-black text-xs ${
+                        row.grade === 'A'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                          : row.grade === 'B'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                          : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                      }`}
+                    >
+                      {row.grade}
+                    </span>
+                  </td>
+                  <td className="py-3 px-3 text-slate-600 dark:text-slate-400 italic">
+                    {row.remark}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

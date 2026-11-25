@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { User, UserRole, ParentWard } from '../types';
-import { mockUsers, mockParentProfile } from '../data/mockData';
+import { mockUsers } from '../data/mockData';
+import { useSchoolStore } from '../store/useSchoolStore';
 
 export interface LoginCredentials {
   email: string;
@@ -40,11 +41,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return savedRole ? mockUsers[savedRole] || null : null;
   });
 
-  const [selectedWardId, setSelectedWardIdState] = useState<string>(() => {
-    return mockParentProfile.wards[0]?.studentId || '';
-  });
-
+  const [selectedWardId, setSelectedWardIdState] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const students = useSchoolStore((state) => state.students);
+  const grades = useSchoolStore((state) => state.grades);
 
   useEffect(() => {
     if (role) {
@@ -58,7 +59,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [role, currentUser]);
 
-  const wards = mockParentProfile.wards;
+  // Dynamically resolve wards linked to the active parent account
+  const wards: ParentWard[] = useMemo(() => {
+    if (!currentUser || currentUser.role !== 'parent') return [];
+
+    let matched = students.filter(
+      (s) =>
+        (s.guardianEmail && currentUser.email && s.guardianEmail.toLowerCase() === currentUser.email.toLowerCase()) ||
+        s.parentId === currentUser.id
+    );
+
+    // If demo parent has no exact email matches, link all active students in the registry
+    if (
+      matched.length === 0 &&
+      (currentUser.email === 'parent@federalexcellence.edu.ng' || currentUser.id === 'usr-par-01')
+    ) {
+      matched = students.filter((s) => s.status === 'Active');
+    }
+
+    return matched.map((s) => {
+      const studentGrades = grades.filter((g) => g.studentId === s.id);
+      const avg =
+        studentGrades.length > 0
+          ? Math.round(studentGrades.reduce((sum, g) => sum + g.total, 0) / studentGrades.length)
+          : 85;
+
+      return {
+        studentId: s.id,
+        name: s.fullName,
+        admissionNo: s.admissionNo,
+        className: s.className,
+        avatar: s.avatar,
+        attendancePercentage: s.attendancePercentage || 100,
+        averageGrade: avg,
+        feeBalance: s.feeBalance || 0,
+      };
+    });
+  }, [students, grades, currentUser]);
+
   const selectedWard = wards.find((w) => w.studentId === selectedWardId) || wards[0] || null;
 
   // Sign in using credentials
