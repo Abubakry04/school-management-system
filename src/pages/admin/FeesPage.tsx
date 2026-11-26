@@ -18,8 +18,9 @@ import { Modal } from '../../components/ui/Modal';
 import { FormInput, FormSelect } from '../../components/ui/FormInputs';
 import { ReceiptModal } from '../../components/ui/ReceiptModal';
 import { PaymentRecord, FeeStructure } from '../../types';
-import { mockPaymentRecords, mockFeeStructures, mockStudents } from '../../data/mockData';
 import { useToast } from '../../context/ToastContext';
+import { useData } from '../../context/DataContext';
+import { DebtorsRegisterTable } from '../../components/fees/DebtorsRegisterTable';
 
 const paymentSchema = z.object({
   studentId: z.string().min(1, 'Please select a student'),
@@ -32,10 +33,13 @@ type PaymentFormData = z.infer<typeof paymentSchema>;
 
 export const FeesPage: React.FC = () => {
   const { showToast } = useToast();
+  const { payments: paymentRecords, students: mockStudents, feeStructures, addPayment, settings } = useData();
 
-  const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>(mockPaymentRecords);
+  const [activeTab, setActiveTab] = useState<'payments' | 'debtors'>('payments');
   const [selectedReceipt, setSelectedReceipt] = useState<PaymentRecord | null>(null);
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+
+  const debtorsCount = mockStudents.filter((s) => s.feeBalance > 0).length;
 
   const {
     register,
@@ -45,10 +49,10 @@ export const FeesPage: React.FC = () => {
   } = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
-      studentId: mockStudents[0].id,
+      studentId: mockStudents[0]?.id || '',
       amountPaid: 290000,
       paymentMethod: 'Bank Transfer',
-      term: '2nd Term',
+      term: settings.currentTerm,
     },
   });
 
@@ -57,30 +61,27 @@ export const FeesPage: React.FC = () => {
 
   const onSubmitPayment = (data: PaymentFormData) => {
     const student = mockStudents.find((s) => s.id === data.studentId) || mockStudents[0];
-    const totalDue = student.className.startsWith('SS') ? 290000 : 240000;
+    const totalDue = student?.className.startsWith('SS') ? 290000 : 240000;
     const balance = Math.max(0, totalDue - data.amountPaid);
     const status = balance === 0 ? 'Paid' : data.amountPaid > 0 ? 'Partial' : 'Pending';
 
-    const newPayment: PaymentRecord = {
-      id: `pay-${Date.now()}`,
-      receiptNumber: `FEA/REC/2026/0${Math.floor(550 + Math.random() * 400)}`,
-      studentId: student.id,
-      studentName: student.fullName,
-      admissionNo: student.admissionNo,
-      className: student.className,
+    const recorded = addPayment({
+      studentId: student?.id || data.studentId,
+      studentName: student?.fullName || 'Student',
+      admissionNo: student?.admissionNo || '',
+      className: student?.className || 'JSS 1A',
       amountPaid: data.amountPaid,
       totalDue,
       balance,
-      paymentDate: '16th Feb, 2026',
+      paymentDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
       paymentMethod: data.paymentMethod,
       status,
       term: data.term,
-      session: '2025/2026',
+      session: settings.currentSession,
       recordedBy: 'Mrs. K. Bankole (Bursar)',
-    };
+    });
 
-    setPaymentRecords((prev) => [newPayment, ...prev]);
-    showToast(`Payment of ₦${data.amountPaid.toLocaleString()} recorded for ${student.fullName}`, 'success');
+    showToast(`Payment of ₦${data.amountPaid.toLocaleString()} recorded for ${student?.fullName}`, 'success');
     setIsRecordModalOpen(false);
     reset();
   };
@@ -182,21 +183,45 @@ export const FeesPage: React.FC = () => {
             Bursary & Fee Management
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Termly fee structures, student payment records, outstanding balances, and official receipts.
+            Termly fee structures, student payment records, debtors register, and official receipts.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={() => showToast('Financial audit statement downloaded', 'info')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export Statement</span>
-          </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Tabs */}
+          <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => setActiveTab('payments')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeTab === 'payments'
+                  ? 'bg-white dark:bg-slate-900 text-brand-700 dark:text-brand-300 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              Collections & Tariffs
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('debtors')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeTab === 'debtors'
+                  ? 'bg-white dark:bg-slate-900 text-rose-700 dark:text-rose-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              <span>Debtors Register</span>
+              {debtorsCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-bold">
+                  {debtorsCount}
+                </span>
+              )}
+            </button>
+          </div>
+
           <button
             onClick={() => setIsRecordModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-600/20 transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-600/20 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Record Payment</span>
@@ -204,7 +229,11 @@ export const FeesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Summary Stat Row */}
+      {activeTab === 'debtors' ? (
+        <DebtorsRegisterTable />
+      ) : (
+        <>
+          {/* Summary Stat Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <p className="text-xs text-slate-400 font-semibold uppercase">Total Fee Payments</p>
@@ -233,7 +262,7 @@ export const FeesPage: React.FC = () => {
 
       {/* Fee Structure Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {mockFeeStructures.map((fee) => (
+        {feeStructures.map((fee) => (
           <div
             key={fee.id}
             className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3"
@@ -301,6 +330,8 @@ export const FeesPage: React.FC = () => {
           onRowClick={(p) => setSelectedReceipt(p)}
         />
       </div>
+    </>
+  )}
 
       {/* Record Payment Modal */}
       <Modal

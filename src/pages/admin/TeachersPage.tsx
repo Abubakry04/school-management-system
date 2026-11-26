@@ -18,8 +18,8 @@ import { Modal } from '../../components/ui/Modal';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { FormInput, FormSelect } from '../../components/ui/FormInputs';
 import { Teacher } from '../../types';
-import { mockTeachers } from '../../data/mockData';
 import { useToast } from '../../context/ToastContext';
+import { useData } from '../../context/DataContext';
 
 const teacherSchema = z.object({
   name: z.string().min(3, 'Full name is required'),
@@ -36,8 +36,8 @@ type TeacherFormData = z.infer<typeof teacherSchema>;
 export const TeachersPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { teachers: teachersList, addTeacher, updateTeacher, deleteTeacher } = useData();
 
-  const [teachersList, setTeachersList] = useState<Teacher[]>(mockTeachers);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [teacherToDelete, setTeacherToDelete] = useState<Teacher | null>(null);
@@ -87,30 +87,10 @@ export const TeachersPage: React.FC = () => {
 
   const onSubmit = (data: TeacherFormData) => {
     if (editingTeacher) {
-      setTeachersList((prev) =>
-        prev.map((t) => (t.id === editingTeacher.id ? { ...t, ...data } : t))
-      );
+      updateTeacher(editingTeacher.id, data);
       showToast(`Teacher profile for ${data.name} updated successfully!`, 'success');
     } else {
-      const newTeacher: Teacher = {
-        id: `tch-${Date.now()}`,
-        staffId: `FEA/STF/${Math.floor(100 + Math.random() * 900)}`,
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        gender: data.gender,
-        qualification: data.qualification,
-        department: data.department,
-        subjects: ['General Studies'],
-        assignedClasses: ['JSS 1A'],
-        avatar:
-          data.gender === 'Female'
-            ? 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80'
-            : 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
-        status: data.status,
-        dateJoined: '10th Feb, 2026',
-      };
-      setTeachersList((prev) => [newTeacher, ...prev]);
+      const newTeacher = addTeacher(data);
       showToast(`Faculty member ${newTeacher.name} appointed!`, 'success');
     }
 
@@ -119,7 +99,7 @@ export const TeachersPage: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (!teacherToDelete) return;
-    setTeachersList((prev) => prev.filter((t) => t.id !== teacherToDelete.id));
+    deleteTeacher(teacherToDelete.id);
     showToast(`Staff record for ${teacherToDelete.name} archived.`, 'info');
     setTeacherToDelete(null);
   };

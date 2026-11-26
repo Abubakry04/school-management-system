@@ -1,10 +1,11 @@
 import React from 'react';
 import { Megaphone, Pin } from 'lucide-react';
-import { mockAnnouncements } from '../../data/mockData';
 import { Badge } from '../../components/ui/Badge';
+import { useData } from '../../context/DataContext';
 
 export const TeacherAnnouncementsPage: React.FC = () => {
-  const staffAnnouncements = mockAnnouncements.filter(
+  const { announcements } = useData();
+  const staffAnnouncements = announcements.filter(
     (a) => a.targetAudience === 'Teachers' || a.targetAudience === 'All'
   );
 

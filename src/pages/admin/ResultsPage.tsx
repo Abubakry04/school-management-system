@@ -1,27 +1,43 @@
 import React, { useState } from 'react';
 import {
   Award,
-  Filter,
   Download,
   Printer,
-  FileCheck,
-  TrendingUp,
+  FileText,
+  Table,
+  ListFilter,
 } from 'lucide-react';
-import { mockGrades, mockClasses } from '../../data/mockData';
-import { GradeItem } from '../../types';
-import { Badge } from '../../components/ui/Badge';
+import { Student } from '../../types';
+import { Modal } from '../../components/ui/Modal';
 import { useToast } from '../../context/ToastContext';
+import { useData } from '../../context/DataContext';
+import { OfficialReportCard } from '../../components/reports/OfficialReportCard';
+import { ClassBroadsheetTable } from '../../components/grades/ClassBroadsheetTable';
 
 export const ResultsPage: React.FC = () => {
   const { showToast } = useToast();
+  const { grades: allGrades, classes: mockClasses, students, settings } = useData();
+
+  const [activeTab, setActiveTab] = useState<'broadsheet' | 'scores'>('broadsheet');
   const [selectedClassId, setSelectedClassId] = useState('cls-06'); // SS 2 Science
-  const [selectedTerm, setSelectedTerm] = useState('2nd Term');
+  const [selectedTerm, setSelectedTerm] = useState<string>(settings.currentTerm);
   const [selectedSubject, setSelectedSubject] = useState('all');
+  const [previewStudent, setPreviewStudent] = useState<Student | null>(null);
 
-  const selectedClass = mockClasses.find((c) => c.id === selectedClassId) || mockClasses[0];
+  const selectedClass = mockClasses.find((c) => c.id === selectedClassId) || mockClasses[0] || {
+    id: 'cls-01',
+    name: 'All Classes',
+    level: 'Junior' as const,
+    classTeacherId: '',
+    classTeacherName: '',
+    studentCount: 0,
+    capacity: 35,
+    room: '',
+    subjects: [],
+  };
 
-  const filteredGrades = mockGrades.filter((g) => {
-    const matchClass = g.classId === selectedClassId;
+  const filteredGrades = allGrades.filter((g) => {
+    const matchClass = g.classId === selectedClassId || selectedClassId === 'all';
     const matchTerm = g.term === selectedTerm;
     const matchSubject = selectedSubject === 'all' || g.subject === selectedSubject;
     return matchClass && matchTerm && matchSubject;
@@ -35,6 +51,42 @@ export const ResultsPage: React.FC = () => {
     ? Math.max(...filteredGrades.map((g) => g.total))
     : 0;
 
+  const handleOpenReportCard = (studentId: string) => {
+    const found = students.find((s) => s.id === studentId);
+    if (found) {
+      setPreviewStudent(found);
+    } else {
+      // Fallback pseudo student
+      const gradeSample = allGrades.find((g) => g.studentId === studentId);
+      if (gradeSample) {
+        setPreviewStudent({
+          id: studentId,
+          admissionNo: gradeSample.admissionNo,
+          firstName: gradeSample.studentName.split(' ')[0],
+          lastName: gradeSample.studentName.split(' ').slice(1).join(' '),
+          fullName: gradeSample.studentName,
+          gender: 'Female',
+          dob: '2009-10-12',
+          classId: selectedClass.id,
+          className: selectedClass.name,
+          guardianName: 'Guardian',
+          guardianPhone: '+234 800 000 0000',
+          guardianEmail: 'parent@example.com',
+          address: 'Victoria Island, Lagos',
+          bloodGroup: 'O+',
+          stateOfOrigin: 'Lagos State',
+          lga: 'Ikeja',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          status: 'Active',
+          feeBalance: 0,
+          attendancePercentage: 97,
+          parentId: 'par-01',
+          enrolledDate: '12th Sep, 2023',
+        });
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -44,59 +96,69 @@ export const ResultsPage: React.FC = () => {
             Academic Broadsheet & Results
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Official termly academic scores compilation and broadsheet moderation.
+            Official termly academic scores compilation, moderation, class rank broadsheet, and report sheets.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* View Mode Tabs */}
+        <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
           <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            type="button"
+            onClick={() => setActiveTab('broadsheet')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === 'broadsheet'
+                ? 'bg-white dark:bg-slate-900 text-emerald-800 dark:text-emerald-300 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
           >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Print Broadsheet</span>
+            <Table className="w-3.5 h-3.5" />
+            <span>Master Broadsheet</span>
           </button>
           <button
-            onClick={() => showToast('Class broadsheet exported as PDF', 'success')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition-colors"
+            type="button"
+            onClick={() => setActiveTab('scores')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === 'scores'
+                ? 'bg-white dark:bg-slate-900 text-emerald-800 dark:text-emerald-300 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export Master Sheet</span>
+            <ListFilter className="w-3.5 h-3.5" />
+            <span>Scores Log</span>
           </button>
         </div>
       </div>
 
-      {/* Filters bar */}
-      <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-wrap gap-4 items-center justify-between">
-        <div className="flex flex-wrap gap-3 items-center">
+      {activeTab === 'broadsheet' ? (
+        <ClassBroadsheetTable initialClassId={selectedClassId} initialTerm={selectedTerm as any} />
+      ) : (
+        <>
+          {/* Filter Bar & Key Metrics */}
+      <div className="p-4 sm:p-5 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Class Select */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Class:
-            </label>
+            <span className="text-xs font-semibold text-slate-500">Class:</span>
             <select
               value={selectedClassId}
-              onChange={(e) => {
-                setSelectedClassId(e.target.value);
-                setSelectedSubject('all');
-              }}
-              className="px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              onChange={(e) => setSelectedClassId(e.target.value)}
+              className="text-xs font-medium py-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
-              {mockClasses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
+              {mockClasses.map((cls) => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.name}
                 </option>
               ))}
             </select>
           </div>
 
+          {/* Term Select */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Term:
-            </label>
+            <span className="text-xs font-semibold text-slate-500">Term:</span>
             <select
               value={selectedTerm}
               onChange={(e) => setSelectedTerm(e.target.value)}
-              className="px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="text-xs font-medium py-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="1st Term">1st Term</option>
               <option value="2nd Term">2nd Term</option>
@@ -104,14 +166,13 @@ export const ResultsPage: React.FC = () => {
             </select>
           </div>
 
+          {/* Subject Filter */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Subject:
-            </label>
+            <span className="text-xs font-semibold text-slate-500">Subject:</span>
             <select
               value={selectedSubject}
               onChange={(e) => setSelectedSubject(e.target.value)}
-              className="px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="text-xs font-medium py-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="all">All Subjects</option>
               {selectedClass.subjects.map((sub) => (
@@ -166,12 +227,13 @@ export const ResultsPage: React.FC = () => {
                 <th className="py-3 px-3 text-center font-bold">Total (100)</th>
                 <th className="py-3 px-3 text-center">Grade</th>
                 <th className="py-3 px-3">Remark</th>
+                <th className="py-3 px-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:border-slate-800">
               {filteredGrades.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400">
+                  <td colSpan={10} className="py-8 text-center text-slate-400">
                     No scores compiled for the selected class, term and subject criteria.
                   </td>
                 </tr>
@@ -215,6 +277,16 @@ export const ResultsPage: React.FC = () => {
                     <td className="py-3 px-3 text-slate-500 dark:text-slate-400 italic">
                       {g.remark}
                     </td>
+                    <td className="py-3 px-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenReportCard(g.studentId)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 transition-colors"
+                      >
+                        <FileText className="w-3 h-3" />
+                        <span>Report Card</span>
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -222,6 +294,29 @@ export const ResultsPage: React.FC = () => {
           </table>
         </div>
       </div>
+    </>
+  )}
+
+      {/* Official Report Card Modal for Selected Student */}
+      {previewStudent && (
+        <Modal
+          isOpen={!!previewStudent}
+          onClose={() => setPreviewStudent(null)}
+          title={`Official Terminal Report Card — ${previewStudent.fullName}`}
+          maxWidth="3xl"
+        >
+          <div className="py-2">
+            <OfficialReportCard
+              student={previewStudent}
+              grades={allGrades}
+              settings={settings}
+              term={selectedTerm}
+              session={settings.currentSession}
+              onClose={() => setPreviewStudent(null)}
+            />
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

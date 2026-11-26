@@ -7,20 +7,33 @@ import {
   CheckCircle2,
   Edit,
   GraduationCap,
+  ArrowRight,
+  TrendingUp,
 } from 'lucide-react';
-import { mockClasses, mockTeachers } from '../../data/mockData';
 import { SchoolClass } from '../../types';
 import { Modal } from '../../components/ui/Modal';
 import { FormInput, FormSelect } from '../../components/ui/FormInputs';
 import { Badge } from '../../components/ui/Badge';
 import { useToast } from '../../context/ToastContext';
+import { useData } from '../../context/DataContext';
 
 export const ClassesPage: React.FC = () => {
   const { showToast } = useToast();
-  const [classesList, setClassesList] = useState<SchoolClass[]>(mockClasses);
+  const { classes: classesList, teachers: mockTeachers, students, updateClass, promoteStudents } = useData();
   const [selectedClass, setSelectedClass] = useState<SchoolClass | null>(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedTeacherId, setSelectedTeacherId] = useState('');
+
+  // Promotion Modal State
+  const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
+  const [fromClassId, setFromClassId] = useState(classesList[0]?.id || '');
+  const [toClassId, setToClassId] = useState(classesList[1]?.id || '');
+
+  const fromClass = classesList.find((c) => c.id === fromClassId);
+  const toClass = classesList.find((c) => c.id === toClassId);
+  const eligibleStudentsCount = students.filter(
+    (s) => s.classId === fromClassId && s.status === 'Active'
+  ).length;
 
   const handleOpenAssign = (cls: SchoolClass) => {
     setSelectedClass(cls);
@@ -33,15 +46,31 @@ export const ClassesPage: React.FC = () => {
     const teacher = mockTeachers.find((t) => t.id === selectedTeacherId);
     const teacherName = teacher ? teacher.name : selectedClass.classTeacherName;
 
-    setClassesList((prev) =>
-      prev.map((c) =>
-        c.id === selectedClass.id
-          ? { ...c, classTeacherId: selectedTeacherId, classTeacherName: teacherName }
-          : c
-      )
-    );
+    updateClass(selectedClass.id, {
+      classTeacherId: selectedTeacherId,
+      classTeacherName: teacherName,
+    });
     showToast(`Form Teacher for ${selectedClass.name} updated to ${teacherName}`, 'success');
     setIsAssignModalOpen(false);
+  };
+
+  const handlePromoteStudents = () => {
+    if (!fromClassId || !toClassId) {
+      showToast('Please select both source and target classes', 'error');
+      return;
+    }
+    if (fromClassId === toClassId) {
+      showToast('Source and destination classes cannot be identical', 'error');
+      return;
+    }
+
+    const count = promoteStudents(fromClassId, toClassId);
+    if (count === 0) {
+      showToast(`No active students found in ${fromClass?.name || 'source class'} to promote`, 'info');
+    } else {
+      showToast(`Successfully promoted ${count} student${count > 1 ? 's' : ''} to ${toClass?.name}!`, 'success');
+    }
+    setIsPromoteModalOpen(false);
   };
 
   return (
@@ -57,13 +86,22 @@ export const ClassesPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => showToast('Class arms setup locked by Academic Council', 'info')}
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-600/20 transition-all self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Class Arm</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsPromoteModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-sm transition-all"
+          >
+            <TrendingUp className="w-4 h-4 text-brand-600" />
+            <span>Academic Promotion</span>
+          </button>
+          <button
+            onClick={() => showToast('Class arms setup locked by Academic Council', 'info')}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-600/20 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Class Arm</span>
+          </button>
+        </div>
       </div>
 
       {/* Class Grid */}
@@ -192,6 +230,71 @@ export const ClassesPage: React.FC = () => {
               value: t.id,
             }))}
           />
+        </div>
+      </Modal>
+      {/* Promotion Modal */}
+      <Modal
+        isOpen={isPromoteModalOpen}
+        onClose={() => setIsPromoteModalOpen(false)}
+        title="Student Promotion & Session Rollover"
+        description="Advance active students from their current class arm to the next academic grade level."
+        maxWidth="lg"
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button
+              onClick={() => setIsPromoteModalOpen(false)}
+              className="px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handlePromoteStudents}
+              className="px-5 py-2 text-xs sm:text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-md transition-colors"
+            >
+              Execute Promotion
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="p-4 rounded-2xl bg-brand-50 dark:bg-brand-950/40 border border-brand-100 dark:border-brand-900/40 text-xs text-brand-900 dark:text-brand-300">
+            <p className="font-semibold mb-1">Session Advancement Note</p>
+            <p className="opacity-90">
+              Promoting advances all active students in the selected source class. Their profile class name, class ID, and class capacity metrics will be updated immediately in the school registry.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <FormSelect
+                label="Source Class (From)"
+                value={fromClassId}
+                onChange={(e) => setFromClassId(e.target.value)}
+                options={classesList.map((c) => ({
+                  label: `${c.name} (${students.filter((s) => s.classId === c.id && s.status === 'Active').length} active students)`,
+                  value: c.id,
+                }))}
+              />
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
+                Eligible students ready for advancement: <strong className="text-brand-600 font-semibold">{eligibleStudentsCount}</strong>
+              </p>
+            </div>
+
+            <div>
+              <FormSelect
+                label="Destination Class (To)"
+                value={toClassId}
+                onChange={(e) => setToClassId(e.target.value)}
+                options={classesList.map((c) => ({
+                  label: `${c.name} (Max cap: ${c.capacity})`,
+                  value: c.id,
+                }))}
+              />
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
+                Target class arm: <strong className="text-slate-700 dark:text-slate-300">{toClass?.name || 'None selected'}</strong>
+              </p>
+            </div>
+          </div>
         </div>
       </Modal>
     </div>

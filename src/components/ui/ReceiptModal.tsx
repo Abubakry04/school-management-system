@@ -36,11 +36,11 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       description={`Receipt reference: ${record.receiptNumber}`}
       maxWidth="xl"
       footer={
-        <div className="flex items-center justify-between w-full no-print">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-2.5 no-print">
           <div className="text-xs text-slate-500 font-mono">
             Recorded by: <span className="font-semibold text-slate-700 dark:text-slate-300">{record.recordedBy}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <button
               type="button"
               onClick={handlePrint}
@@ -62,7 +62,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       }
     >
       {/* Official Bursary Document */}
-      <div className="p-6 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-white print-shadow-none">
+      <div className="p-4 sm:p-6 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white print-shadow-none">
         {/* School Letterhead */}
         <div className="text-center pb-4 border-b border-slate-800 dark:border-slate-200">
           <div className="inline-block px-2 py-0.5 border border-slate-800 dark:border-slate-200 text-[10px] font-mono font-bold uppercase tracking-widest mb-1.5">

@@ -14,19 +14,23 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ role }) => {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-[#f4f6f5] dark:bg-slate-950 flex flex-col font-sans print:bg-white">
       {/* Sidebar for this role */}
-      <Sidebar
-        role={role}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      <div className="no-print">
+        <Sidebar
+          role={role}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+      </div>
 
       {/* Main Content Area */}
-      <div className="lg:pl-64 flex flex-col flex-1 min-w-0">
-        <Topbar onToggleSidebar={() => setSidebarOpen((prev) => !prev)} />
+      <div className="lg:pl-64 flex flex-col flex-1 min-w-0 print:pl-0">
+        <div className="no-print">
+          <Topbar onToggleSidebar={() => setSidebarOpen((prev) => !prev)} />
+        </div>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto animate-in fade-in duration-300">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto animate-in fade-in duration-300 print:p-0 print:max-w-none">
           <Outlet />
         </main>
       </div>

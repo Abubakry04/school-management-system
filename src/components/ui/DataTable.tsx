@@ -135,8 +135,8 @@ export function DataTable<T extends Record<string, any>>({
     <div className="w-full space-y-3">
       {/* Controls Bar */}
       <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
-        <div className="flex flex-1 flex-wrap gap-2 items-center">
-          <div className="relative min-w-[220px] flex-1 max-w-sm">
+        <div className="flex flex-col sm:flex-row flex-1 gap-2 items-stretch sm:items-center">
+          <div className="relative w-full sm:w-auto flex-1 max-w-sm">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -146,29 +146,33 @@ export function DataTable<T extends Record<string, any>>({
                 setCurrentPage(1);
               }}
               placeholder={searchPlaceholder}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 transition-colors"
+              className="w-full pl-9 pr-3 py-2 sm:py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg sm:rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 transition-colors"
             />
           </div>
 
-          {filters?.map((f) => (
-            <div key={f.key} className="flex items-center">
-              <select
-                value={selectedFilters[f.key] || 'all'}
-                onChange={(e) => handleFilterChange(f.key, e.target.value)}
-                className="px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-brand-500 transition-colors"
-              >
-                <option value="all">All {f.label}</option>
-                {f.options.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+          {filters && filters.length > 0 && (
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+              {filters.map((f) => (
+                <div key={f.key} className="flex-1 sm:flex-none">
+                  <select
+                    value={selectedFilters[f.key] || 'all'}
+                    onChange={(e) => handleFilterChange(f.key, e.target.value)}
+                    className="w-full sm:w-auto px-2.5 py-2 sm:py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg sm:rounded-md text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-brand-500 transition-colors"
+                  >
+                    <option value="all">All {f.label}</option>
+                    {f.options.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
 
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {actions && <div className="flex items-center gap-2 pt-1 sm:pt-0">{actions}</div>}
       </div>
 
       {/* Table Container */}
