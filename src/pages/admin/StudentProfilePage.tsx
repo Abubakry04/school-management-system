@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -18,6 +18,7 @@ import {
 import { Badge } from '../../components/ui/Badge';
 import { useToast } from '../../context/ToastContext';
 import { useData } from '../../context/DataContext';
+import { StudentIDCardModal } from '../../components/students/StudentIDCardModal';
 
 export const StudentProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +26,7 @@ export const StudentProfilePage: React.FC = () => {
   const { showToast } = useToast();
   const { students, grades: allGrades, payments: allPayments, updateStudent } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showIDModal, setShowIDModal] = useState(false);
 
   const student = students.find((s) => s.id === id) || students[0];
   const grades = allGrades.filter((g) => g.studentId === student?.id);
@@ -95,6 +97,14 @@ export const StudentProfilePage: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowIDModal(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs transition-colors cursor-pointer"
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>ID Card & Exam Docket</span>
+          </button>
           <button
             onClick={() => window.print()}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
@@ -350,6 +360,13 @@ export const StudentProfilePage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Student ID Card & Exam Clearance Docket Modal */}
+      <StudentIDCardModal
+        isOpen={showIDModal}
+        onClose={() => setShowIDModal(false)}
+        student={student}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -12,6 +12,10 @@ import {
   FileSpreadsheet,
   Clock,
   Activity,
+  Download,
+  Upload,
+  Database,
+  RefreshCw,
 } from 'lucide-react';
 import { SchoolSettings, AuditLog } from '../../types';
 import { FormInput, FormSelect } from '../../components/ui/FormInputs';
@@ -37,7 +41,9 @@ type SettingsFormData = z.infer<typeof settingsSchema>;
 
 export const SettingsPage: React.FC = () => {
   const { showToast } = useToast();
-  const { settings, updateSettings, clearAllRecords, auditLogs } = useData();
+  const storeData = useData();
+  const { settings, updateSettings, clearAllRecords, auditLogs, restoreStore, resetToDefaults } = storeData;
+  const backupFileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -52,6 +58,85 @@ export const SettingsPage: React.FC = () => {
   const onSubmit = (data: SettingsFormData) => {
     updateSettings(data);
     showToast('School settings and term parameters updated!', 'success');
+  };
+
+  const handleExportBackup = () => {
+    const backupPayload = {
+      meta: {
+        app: 'Federal Excellence Academy SIS',
+        exportedAt: new Date().toISOString(),
+        version: '2.0.0',
+      },
+      data: {
+        settings: storeData.settings,
+        feeStructures: storeData.feeStructures,
+        subjects: storeData.subjects,
+        classes: storeData.classes,
+        students: storeData.students,
+        teachers: storeData.teachers,
+        payments: storeData.payments,
+        attendance: storeData.attendance,
+        grades: storeData.grades,
+        timetable: storeData.timetable,
+        announcements: storeData.announcements,
+        applicants: storeData.applicants,
+        assignments: storeData.assignments,
+        submissions: storeData.submissions,
+        behavioralRatings: storeData.behavioralRatings,
+      },
+    };
+
+    const jsonStr = JSON.stringify(backupPayload, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const dateStr = new Date().toISOString().split('T')[0];
+    link.href = url;
+    link.download = `FEA_SIS_Backup_${dateStr}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast('Full system database backup downloaded (.json)', 'success');
+  };
+
+  const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        const payloadData = parsed.data || parsed;
+        if (!payloadData || typeof payloadData !== 'object') {
+          throw new Error('Invalid backup file format');
+        }
+
+        if (
+          window.confirm(
+            'Restoring this backup will merge and update your current school data with the backup contents. Do you want to proceed?'
+          )
+        ) {
+          restoreStore(payloadData);
+          showToast('Database backup restored successfully!', 'success');
+        }
+      } catch (err) {
+        showToast('Failed to parse backup file. Please ensure it is a valid SIS JSON export.', 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleFactoryReset = () => {
+    if (
+      window.confirm(
+        'WARNING: Factory Reset will reset all settings, classes, subjects, and records back to initial default configurations. This cannot be undone. Proceed?'
+      )
+    ) {
+      resetToDefaults();
+      reset(settings);
+      showToast('System reverted to factory defaults.', 'info');
+    }
   };
 
   const handleClearAllRecords = () => {
@@ -263,6 +348,71 @@ export const SettingsPage: React.FC = () => {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Database Backup & Disaster Recovery */}
+      <div className="p-6 sm:p-8 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <Database className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Database Backup & Disaster Recovery
+            </h2>
+            <p className="text-xs text-slate-400">
+              Export and import the entire school repository (students, grades, bursary records, timetable, and configurations) as an offline portable JSON file.
+            </p>
+          </div>
+        </div>
+
+        <input
+          type="file"
+          ref={backupFileInputRef}
+          onChange={handleImportBackup}
+          accept=".json,application/json"
+          className="hidden"
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex flex-col justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Download className="w-4 h-4 text-emerald-600" />
+                <span>Export Full School Backup</span>
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                Save an instant snapshot of your school’s database to your computer. Useful for offline archiving, audit backups, or system migrations.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleExportBackup}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors cursor-pointer w-full sm:w-auto self-start"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Backup (.json)</span>
+            </button>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex flex-col justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Upload className="w-4 h-4 text-brand-600" />
+                <span>Restore From Backup File</span>
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                Load a previously saved SIS backup file. Replaces/merges records without requiring server redeployment.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => backupFileInputRef.current?.click()}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer w-full sm:w-auto self-start"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Select Backup File (.json)</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Database Maintenance & Clear Data */}

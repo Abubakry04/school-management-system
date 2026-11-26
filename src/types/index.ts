@@ -245,3 +245,26 @@ export interface AuditLog {
   performedBy: string;
   details: string;
 }
+
+export interface BehavioralRating {
+  id: string;
+  studentId: string;
+  term: '1st Term' | '2nd Term' | '3rd Term';
+  session: string;
+  // Affective traits (scale 1 to 5: 1=Poor, 2=Fair, 3=Good, 4=Very Good, 5=Excellent)
+  punctuality: number;
+  neatness: number;
+  politeness: number;
+  honesty: number;
+  leadership: number;
+  relationshipWithPeers: number;
+  // Psychomotor traits (scale 1 to 5)
+  handwriting: number;
+  sportsAndGames: number;
+  verbalFluency: number;
+  craftsAndTools: number;
+  // Remarks
+  teacherRemark?: string;
+  principalRemark?: string;
+}
+

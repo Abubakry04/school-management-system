@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Award,
@@ -12,6 +12,7 @@ import {
   GraduationCap,
   Camera,
   Upload,
+  IdCard,
 } from 'lucide-react';
 import { StatCard } from '../../components/ui/StatCard';
 import { Badge } from '../../components/ui/Badge';
@@ -19,6 +20,7 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { StudentIDCardModal } from '../../components/students/StudentIDCardModal';
 
 export const StudentDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -27,6 +29,7 @@ export const StudentDashboard: React.FC = () => {
   const { students, grades, timetable, announcements, payments, attendance, settings, updateStudent } = useData();
   const student = students[0];
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showIDModal, setShowIDModal] = useState(false);
 
   const handlePassportUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -172,6 +175,14 @@ export const StudentDashboard: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-2">
           <button
+            type="button"
+            onClick={() => setShowIDModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs transition-colors cursor-pointer"
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>ID Card & Exam Pass</span>
+          </button>
+          <button
             onClick={() => navigate('/student/results')}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-brand-700 hover:bg-brand-800 text-white shadow-xs transition-colors"
           >
@@ -316,6 +327,13 @@ export const StudentDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Student ID Card & Exam Docket Modal */}
+      <StudentIDCardModal
+        isOpen={showIDModal}
+        onClose={() => setShowIDModal(false)}
+        student={student}
+      />
     </div>
   );
 };

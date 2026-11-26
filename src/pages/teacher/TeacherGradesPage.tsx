@@ -5,10 +5,16 @@ import {
   CheckCircle2,
   Award,
   Filter,
+  UserCheck,
+  Table,
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useData } from '../../context/DataContext';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { BehavioralAssessmentModal } from '../../components/grades/BehavioralAssessmentModal';
+import { ClassBroadsheetTable } from '../../components/grades/ClassBroadsheetTable';
+import { Modal } from '../../components/ui/Modal';
+import { Student } from '../../types';
 
 interface EditableScoreRow {
   studentId: string;
@@ -36,6 +42,8 @@ export const TeacherGradesPage: React.FC = () => {
   const { students: allStudents, classes, subjects, settings, grades, saveGrade } = useData();
   const [selectedSubject, setSelectedSubject] = useState(subjects[0]?.name || 'General Mathematics');
   const [selectedClass, setSelectedClass] = useState(classes[0]?.name || 'JSS 1A');
+  const [behaviorStudent, setBehaviorStudent] = useState<Student | null>(null);
+  const [showBroadsheetModal, setShowBroadsheetModal] = useState(false);
 
   const classStudents = allStudents.filter((s) => s.className === selectedClass);
   const [scores, setScores] = useState<EditableScoreRow[]>([]);
@@ -130,13 +138,23 @@ export const TeacherGradesPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={handleSaveAll}
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-600/20 transition-all self-start sm:self-auto"
-        >
-          <Save className="w-4 h-4" />
-          <span>Save All Scores</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setShowBroadsheetModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <Table className="w-4 h-4 text-emerald-600" />
+            <span>Class Broadsheet</span>
+          </button>
+          <button
+            onClick={handleSaveAll}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-600/20 transition-all cursor-pointer"
+          >
+            <Save className="w-4 h-4" />
+            <span>Save All Scores</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -201,6 +219,7 @@ export const TeacherGradesPage: React.FC = () => {
                 <th className="py-3 px-3 text-center font-bold">Total (100)</th>
                 <th className="py-3 px-3 text-center">Grade</th>
                 <th className="py-3 px-3">Academic Remark</th>
+                <th className="py-3 px-3 text-right">Appraisal</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:border-slate-800">
@@ -261,12 +280,52 @@ export const TeacherGradesPage: React.FC = () => {
                   <td className="py-3 px-3 text-slate-600 dark:text-slate-400 italic">
                     {row.remark}
                   </td>
+                  <td className="py-3 px-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetStudent = allStudents.find((s) => s.id === row.studentId);
+                        if (targetStudent) setBehaviorStudent(targetStudent);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors"
+                      title="Rate Affective & Psychomotor Traits"
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      <span>Appraisal</span>
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {/* Behavioral Assessment Modal */}
+      {behaviorStudent && (
+        <BehavioralAssessmentModal
+          isOpen={Boolean(behaviorStudent)}
+          onClose={() => setBehaviorStudent(null)}
+          student={behaviorStudent}
+          term={settings.currentTerm}
+          session={settings.currentSession}
+        />
+      )}
+
+      {/* Class Broadsheet Modal */}
+      {showBroadsheetModal && (
+        <Modal
+          isOpen={showBroadsheetModal}
+          onClose={() => setShowBroadsheetModal(false)}
+          title={`Class Broadsheet: ${selectedClass}`}
+          maxWidth="5xl"
+        >
+          <ClassBroadsheetTable
+            initialClassId={classes.find((c) => c.name === selectedClass)?.id}
+            initialTerm={settings.currentTerm}
+          />
+        </Modal>
+      )}
     </div>
   );
 };

@@ -16,6 +16,7 @@ import {
   Assignment,
   AssignmentSubmission,
   AuditLog,
+  BehavioralRating,
 } from '../types';
 import {
   mockSchoolSettings,
@@ -52,6 +53,7 @@ export interface SchoolState {
   assignments: Assignment[];
   submissions: AssignmentSubmission[];
   auditLogs: AuditLog[];
+  behavioralRatings: BehavioralRating[];
 
   // Student Actions
   addStudent: (data: Partial<Student> & { firstName: string; lastName: string; classId: string }) => Student;
@@ -76,6 +78,7 @@ export interface SchoolState {
   // Grades Actions
   saveGrade: (data: Partial<GradeItem> & { studentId: string; subject: string; term: GradeItem['term']; session: string; ca1: number; ca2: number; exam: number }) => GradeItem;
   deleteGrade: (id: string) => void;
+  saveBehavioralRating: (rating: Omit<BehavioralRating, 'id'>) => BehavioralRating;
 
   // Fee / Invoice Actions
   addPayment: (data: Omit<PaymentRecord, 'id' | 'receiptNumber'>) => PaymentRecord;
@@ -111,6 +114,8 @@ export interface SchoolState {
   addAuditLog: (category: AuditLog['category'], action: string, details: string) => void;
   updateSettings: (newSettings: Partial<SchoolSettings>) => void;
   clearAllRecords: () => void;
+  restoreStore: (data: Partial<SchoolState>) => void;
+  resetToDefaults: () => void;
 }
 
 export const useSchoolStore = create<SchoolState>()(
@@ -133,6 +138,7 @@ export const useSchoolStore = create<SchoolState>()(
       applicants: [],
       assignments: [],
       submissions: [],
+      behavioralRatings: [],
       auditLogs: [
         {
           id: 'log-init',
@@ -398,6 +404,36 @@ export const useSchoolStore = create<SchoolState>()(
 
       deleteGrade: (id) => {
         set((state) => ({ grades: state.grades.filter((g) => g.id !== id) }));
+      },
+
+      saveBehavioralRating: (ratingData) => {
+        const ratingId = `beh-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        const newRating: BehavioralRating = {
+          id: ratingId,
+          ...ratingData,
+        };
+
+        set((state) => {
+          const idx = (state.behavioralRatings || []).findIndex(
+            (b) =>
+              b.studentId === newRating.studentId &&
+              b.term === newRating.term &&
+              b.session === newRating.session
+          );
+          if (idx >= 0) {
+            const copy = [...(state.behavioralRatings || [])];
+            copy[idx] = { ...copy[idx], ...newRating, id: copy[idx].id };
+            return { behavioralRatings: copy };
+          }
+          return { behavioralRatings: [newRating, ...(state.behavioralRatings || [])] };
+        });
+
+        get().addAuditLog(
+          'Academics',
+          'Behavioral Assessment Saved',
+          `Updated affective and psychomotor ratings for student ${ratingData.studentId} (${ratingData.term} ${ratingData.session})`
+        );
+        return newRating;
       },
 
       // FEE & PAYMENT ACTIONS
@@ -668,9 +704,72 @@ export const useSchoolStore = create<SchoolState>()(
           applicants: [],
           assignments: [],
           submissions: [],
+          behavioralRatings: [],
           classes: initialClasses.map((c) => ({ ...c, studentCount: 0, classTeacherId: '', classTeacherName: 'Unassigned' })),
         });
         get().addAuditLog('Settings', 'Database Cleared', 'Reset all student, teacher, invoice, and academic records to empty state');
+      },
+
+      restoreStore: (data) => {
+        set((state) => ({
+          ...state,
+          ...(data.settings ? { settings: data.settings } : {}),
+          ...(data.students ? { students: data.students } : {}),
+          ...(data.teachers ? { teachers: data.teachers } : {}),
+          ...(data.classes ? { classes: data.classes } : {}),
+          ...(data.subjects ? { subjects: data.subjects } : {}),
+          ...(data.payments ? { payments: data.payments } : {}),
+          ...(data.attendance ? { attendance: data.attendance } : {}),
+          ...(data.grades ? { grades: data.grades } : {}),
+          ...(data.timetable ? { timetable: data.timetable } : {}),
+          ...(data.announcements ? { announcements: data.announcements } : {}),
+          ...(data.applicants ? { applicants: data.applicants } : {}),
+          ...(data.assignments ? { assignments: data.assignments } : {}),
+          ...(data.submissions ? { submissions: data.submissions } : {}),
+          ...(data.feeStructures ? { feeStructures: data.feeStructures } : {}),
+          ...(data.behavioralRatings ? { behavioralRatings: data.behavioralRatings } : {}),
+          auditLogs: [
+            {
+              id: `log-${Date.now()}`,
+              timestamp: new Date().toLocaleString('en-GB'),
+              action: 'Backup Restored',
+              category: 'Settings',
+              performedBy: 'System Administrator',
+              details: 'System database restored successfully from external JSON backup file.',
+            },
+            ...state.auditLogs,
+          ],
+        }));
+      },
+
+      resetToDefaults: () => {
+        set({
+          settings: mockSchoolSettings,
+          feeStructures: mockFeeStructures,
+          subjects: mockSubjects,
+          classes: initialClasses,
+          students: [],
+          teachers: [],
+          payments: [],
+          attendance: [],
+          grades: [],
+          timetable: [],
+          announcements: [],
+          applicants: [],
+          assignments: [],
+          submissions: [],
+          behavioralRatings: [],
+          auditLogs: [
+            {
+              id: `log-${Date.now()}`,
+              timestamp: new Date().toLocaleString('en-GB'),
+              action: 'Factory Reset',
+              category: 'Settings',
+              performedBy: 'System Administrator',
+              details: 'Reverted system database and institutional settings to factory defaults.',
+            },
+          ],
+        });
       },
     }),
     {

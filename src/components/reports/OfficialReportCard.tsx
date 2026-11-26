@@ -1,6 +1,7 @@
 import React from 'react';
 import { Printer, Download, Award, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { Student, GradeItem, SchoolSettings } from '../../types';
+import { useData } from '../../context/DataContext';
 
 interface OfficialReportCardProps {
   student: Student;
@@ -21,6 +22,11 @@ export const OfficialReportCard: React.FC<OfficialReportCardProps> = ({
   showActions = true,
   onClose,
 }) => {
+  const { behavioralRatings } = useData();
+  const studentRating = (behavioralRatings || []).find(
+    (b) => b.studentId === student.id && b.term === term && (!b.session || b.session === session)
+  );
+
   const filteredGrades = grades.filter(
     (g) => g.term === term && (!g.session || g.session === session)
   );
@@ -240,11 +246,12 @@ export const OfficialReportCard: React.FC<OfficialReportCardProps> = ({
             </h4>
             <div className="space-y-1">
               {[
-                { trait: 'Punctuality & School Attendance', score: 5 },
-                { trait: 'Personal Cleanliness & Neatness', score: 5 },
-                { trait: 'Politeness & Respect for Staff', score: 5 },
-                { trait: 'Honesty & Integrity', score: 5 },
-                { trait: 'Leadership & Class Initiative', score: 4 },
+                { trait: 'Punctuality & Regularity', score: studentRating?.punctuality ?? 5 },
+                { trait: 'Personal Cleanliness & Neatness', score: studentRating?.neatness ?? 5 },
+                { trait: 'Politeness & Respect for Staff', score: studentRating?.politeness ?? 5 },
+                { trait: 'Honesty & Integrity', score: studentRating?.honesty ?? 5 },
+                { trait: 'Classroom Leadership & Initiative', score: studentRating?.leadership ?? 4 },
+                { trait: 'Attentiveness & Peer Relations', score: studentRating?.relationshipWithPeers ?? 5 },
               ].map((item) => (
                 <div key={item.trait} className="flex justify-between items-center text-[11px]">
                   <span>{item.trait}</span>
@@ -262,11 +269,10 @@ export const OfficialReportCard: React.FC<OfficialReportCardProps> = ({
             </h4>
             <div className="space-y-1">
               {[
-                { trait: 'Handwriting & Book Presentation', score: 4 },
-                { trait: 'Science Laboratory Dexterity', score: 5 },
-                { trait: 'Participation in Sports & Games', score: 4 },
-                { trait: 'ICT & Computational Fluency', score: 5 },
-                { trait: 'Musical / Literary Dexterity', score: 4 },
+                { trait: 'Handwriting & Script Presentation', score: studentRating?.handwriting ?? 4 },
+                { trait: 'Participation in Sports & Games', score: studentRating?.sportsAndGames ?? 4 },
+                { trait: 'Verbal Fluency & Expression', score: studentRating?.verbalFluency ?? 5 },
+                { trait: 'Tools Handling, Crafts & ICT', score: studentRating?.craftsAndTools ?? 4 },
               ].map((item) => (
                 <div key={item.trait} className="flex justify-between items-center text-[11px]">
                   <span>{item.trait}</span>
@@ -286,10 +292,10 @@ export const OfficialReportCard: React.FC<OfficialReportCardProps> = ({
               Class Teacher's Appraisal:
             </span>
             <p className="italic text-slate-700 mt-1">
-              "{student.fullName} has exhibited phenomenal academic consistency and leadership traits among peers this term. Excellent candidate."
+              "{studentRating?.teacherRemark || `${student.fullName} has exhibited phenomenal academic consistency and leadership traits among peers this term. Excellent candidate.`}"
             </p>
             <span className="block text-[10px] text-slate-500 font-semibold mt-1">
-              Signed: Mr. Chukwuma Okafor, B.Sc (Ed) — Form Master
+              Signed: Form Master / Class Teacher
             </span>
           </div>
 

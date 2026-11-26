@@ -4,17 +4,21 @@ import {
   Download,
   Printer,
   FileText,
+  Table,
+  ListFilter,
 } from 'lucide-react';
 import { Student } from '../../types';
 import { Modal } from '../../components/ui/Modal';
 import { useToast } from '../../context/ToastContext';
 import { useData } from '../../context/DataContext';
 import { OfficialReportCard } from '../../components/reports/OfficialReportCard';
+import { ClassBroadsheetTable } from '../../components/grades/ClassBroadsheetTable';
 
 export const ResultsPage: React.FC = () => {
   const { showToast } = useToast();
   const { grades: allGrades, classes: mockClasses, students, settings } = useData();
 
+  const [activeTab, setActiveTab] = useState<'broadsheet' | 'scores'>('broadsheet');
   const [selectedClassId, setSelectedClassId] = useState('cls-06'); // SS 2 Science
   const [selectedTerm, setSelectedTerm] = useState<string>(settings.currentTerm);
   const [selectedSubject, setSelectedSubject] = useState('all');
@@ -92,29 +96,44 @@ export const ResultsPage: React.FC = () => {
             Academic Broadsheet & Results
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Official termly academic scores compilation, moderation, and individual terminal report sheets.
+            Official termly academic scores compilation, moderation, class rank broadsheet, and report sheets.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* View Mode Tabs */}
+        <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
           <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            type="button"
+            onClick={() => setActiveTab('broadsheet')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === 'broadsheet'
+                ? 'bg-white dark:bg-slate-900 text-emerald-800 dark:text-emerald-300 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
           >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Print Broadsheet</span>
+            <Table className="w-3.5 h-3.5" />
+            <span>Master Broadsheet</span>
           </button>
           <button
-            onClick={() => showToast('Class broadsheet exported as PDF', 'success')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition-colors"
+            type="button"
+            onClick={() => setActiveTab('scores')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === 'scores'
+                ? 'bg-white dark:bg-slate-900 text-emerald-800 dark:text-emerald-300 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export Broadsheet</span>
+            <ListFilter className="w-3.5 h-3.5" />
+            <span>Scores Log</span>
           </button>
         </div>
       </div>
 
-      {/* Filter Bar & Key Metrics */}
+      {activeTab === 'broadsheet' ? (
+        <ClassBroadsheetTable initialClassId={selectedClassId} initialTerm={selectedTerm as any} />
+      ) : (
+        <>
+          {/* Filter Bar & Key Metrics */}
       <div className="p-4 sm:p-5 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
           {/* Class Select */}
@@ -275,6 +294,8 @@ export const ResultsPage: React.FC = () => {
           </table>
         </div>
       </div>
+    </>
+  )}
 
       {/* Official Report Card Modal for Selected Student */}
       {previewStudent && (
